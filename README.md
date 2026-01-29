@@ -109,4 +109,10 @@ deactivate
 2.  **Cập nhật `requirements.txt`**: Vì team làm việc song song, thỉnh thoảng sẽ có người cài thêm thư viện mới (ví dụ `matplotlib`, `seaborn`). Hãy nhắc team chạy lệnh sau trước khi Push code để cập nhật danh sách thư viện cho người khác:
     ```bash
     pip freeze > requirements.txt
+<<<<<<< HEAD
     ```
+=======
+    ```
+
+
+>>>>>>> feature/overview
