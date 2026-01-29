@@ -40,13 +40,9 @@ def calculate_metrics(y_true, y_pred):
 
 
 def print_metrics(metrics, title="Model Performance"):
-    print(f"\n{'='*50}")
     print(f"{title}")
-    print(f"{'='*50}")
     for metric, value in metrics.items():
         print(f"{metric:10s}: {value:.4f}")
-    print(f"{'='*50}\n")
-
 
 def plot_predictions(y_true, y_pred, title="Predictions vs Actual", save_path=None):
     plt.figure(figsize=(10, 6))
@@ -95,7 +91,7 @@ def plot_residuals(y_true, y_pred, title="Residual Plot", save_path=None):
         print(f"Plot saved to: {save_path}")
     
     plt.tight_layout()
-    plt.show()
+    plt.close()
 
 
 def plot_feature_importance(model, feature_names, top_n=20, title="Feature Importance", save_path=None):
@@ -124,7 +120,7 @@ def plot_feature_importance(model, feature_names, top_n=20, title="Feature Impor
         print(f"Plot saved to: {save_path}")
     
     plt.tight_layout()
-    plt.show()
+    plt.close()
     
     return feature_imp_df
 
@@ -151,7 +147,7 @@ def plot_error_distribution_by_groups(y_true, y_pred, group_labels, title="Error
         print(f"Plot saved to: {save_path}")
     
     plt.tight_layout()
-    plt.show()
+    plt.close()
 
 
 def create_evaluation_report(
@@ -161,11 +157,11 @@ def create_evaluation_report(
     model=None,
     save_dir=None
 ):
-    from .config import OUTPUT_DIR
+    from pathlib import Path
     import numpy as np
 
     if save_dir is None:
-        save_dir = OUTPUT_DIR / 'evaluation'
+        save_dir = Path(save_dir)
         save_dir.mkdir(exist_ok=True, parents=True)
 
     y_true = np.array(y_true)
@@ -184,34 +180,35 @@ def create_evaluation_report(
     metrics = calculate_metrics(y_true, y_pred)
     print_metrics(metrics, title="Evaluation Metrics")
 
-    plot_predictions(
-        y_true,
-        y_pred,
-        title="Predictions vs Actual Values",
-        save_path=save_dir / 'predictions_vs_actual.png'
-    )
+    if save_dir:
+        plot_predictions(
+            y_true,
+            y_pred,
+            title="Predictions vs Actual Values",
+            save_path=save_dir / 'predictions_vs_actual.png'
+        )
 
-    plot_residuals(
-        y_true,
-        y_pred,
-        title="Residual Analysis",
-        save_path=save_dir / 'residuals.png'
-    )
+        plot_residuals(
+            y_true,
+            y_pred,
+            title="Residual Analysis",
+            save_path=save_dir / 'residuals.png'
+        )
 
-    if model is not None and feature_names is not None:
-        if len(feature_names) == 0:
-            print("Feature names empty. Skipping feature importance.")
-        else:
-            feature_imp_df = plot_feature_importance(
-                model,
-                feature_names,
-                title="Top 20 Important Features",
-                save_path=save_dir / 'feature_importance.png'
-            )
-            feature_imp_df.to_csv(
-                save_dir / 'feature_importance.csv',
-                index=False
-            )
+        if model is not None and feature_names is not None:
+            if len(feature_names) == 0:
+                print("Feature names empty. Skipping feature importance.")
+            else:
+                feature_imp_df = plot_feature_importance(
+                    model,
+                    feature_names,
+                    title="Top 20 Important Features",
+                    save_path=save_dir / 'feature_importance.png'
+                )
+                feature_imp_df.to_csv(
+                    save_dir / 'feature_importance.csv',
+                    index=False
+                )
 
     return metrics
 

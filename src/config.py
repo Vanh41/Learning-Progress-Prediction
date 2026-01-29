@@ -10,9 +10,15 @@ PROCESSED_DATA_DIR = DATA_DIR / 'processed'
 
 MODELS_DIR = BASE_DIR / 'models'
 OUTPUT_DIR = BASE_DIR / 'output'
+EVALUATION_DIR = OUTPUT_DIR / 'evaluation'
 
-for directory in [RAW_DATA_DIR, EXTERNAL_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR, OUTPUT_DIR]:
+for directory in [RAW_DATA_DIR, EXTERNAL_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR, OUTPUT_DIR, EVALUATION_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
+
+def get_model_output_dir(model_name):
+    model_dir = EVALUATION_DIR / model_name
+    model_dir.mkdir(parents=True, exist_ok=True)
+    return model_dir
 
 ADMISSION_FILE = RAW_DATA_DIR / 'admission.csv'
 ACADEMIC_RECORDS_FILE = RAW_DATA_DIR / 'academic_records.csv'

@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import argparse
 
-from src.config import RANDOM_STATE
+from src.config import RANDOM_STATE, get_model_output_dir
 from src.utils import set_seed, save_model, save_submission
 from src.data_loader import load_and_prepare_data
 from src.features import FeatureEngineer, prepare_features_for_modeling
@@ -18,6 +18,19 @@ from datetime import datetime
 def main(args):
     print("LEARNING PROGRESS PREDICTION - DATAFLOW TEAM")
     set_seed(RANDOM_STATE)
+    
+    # Determine model name for output directory
+    if args.ensemble:
+        model_name = 'ensemble'
+    else:
+        model_name = args.model_type
+    
+    if args.optimize:
+        model_name += '_optimized'
+    
+    # Create output directory for this model
+    model_output_dir = get_model_output_dir(model_name)
+    print(f"\nModel output directory: {model_output_dir}")
     
     # Step 1: Load and prepare data
     print("\n[STEP 1] Loading and preparing data...")
@@ -49,6 +62,13 @@ def main(args):
             timeout=args.timeout
         )
         
+        # Save optimization plots
+        try:
+            optimizer.plot_optimization_history(save_path=model_output_dir / 'optimization_history.png')
+            optimizer.plot_param_importances(save_path=model_output_dir / 'param_importances.png')
+        except Exception as e:
+            print(f"Warning: Could not save optimization plots: {e}")
+        
         # Train final model with best parameters
         trainer = best_model
         trainer.train(X_train, y_train, X_valid, y_valid, categorical_cols)
@@ -71,12 +91,18 @@ def main(args):
     # Predictions on validation set
     y_pred_valid = trainer.predict(X_valid, categorical_cols)
     
-    # Create evaluation report
+    # Create evaluation report (save to model-specific directory)
     metrics = create_evaluation_report(
         y_valid, y_pred_valid,
         feature_names=feature_cols if not args.ensemble else None,
-        model=trainer.model if not args.ensemble else None
+        model=trainer.model if not args.ensemble else None,
+        save_dir=model_output_dir  # ← Key change: pass model-specific directory
     )
+    
+    # Save metrics to file
+    metrics_df = pd.DataFrame([metrics])
+    metrics_df.to_csv(model_output_dir / 'metrics.csv', index=False)
+    print(f"Metrics saved to: {model_output_dir / 'metrics.csv'}")
     
     # Step 5: Predictions on test set
     if test_df is not None and len(test_df) > 0:
@@ -102,38 +128,42 @@ def main(args):
         # Make predictions
         y_pred_test = trainer.predict(X_test, categorical_cols)
         
-        # Save submission
-        submission_path = save_submission(
-            y_pred_test,
-            test_df['MA_SO_SV'],
-            args.team_name
-        )
+        # Save submission to model-specific directory
+        submission = pd.DataFrame({
+            'MA_SO_SV': test_df['MA_SO_SV'],
+            'PRED_TC_HOANTHANH': y_pred_test.astype(int)
+        })
+        submission_path = model_output_dir / f'{args.team_name}_submission.csv'
+        submission.to_csv(submission_path, index=False)
         
         print(f"Submission saved to: {submission_path}")
     
     # Step 6: Save model
     if args.save_model:
         print("\n[STEP 6] Saving model...")
-        model_filename = f"{args.model_type}_model.pkl"
-        save_model(trainer, model_filename)
+        model_filename = f"{model_name}_model.pkl"
+        model_path = model_output_dir / model_filename
+        
+        # Use custom save since we want to save to model-specific directory
+        import joblib
+        joblib.dump(trainer, model_path)
+        print(f"Model saved to: {model_path}")
     
     print("\n" + "="*80)
     print("PIPELINE COMPLETED SUCCESSFULLY!")
+    print(f"All outputs saved to: {model_output_dir}")
     print("="*80)
 
-    experiment_name = f"{args.model_type}"
-    if args.optimize:
-        experiment_name += "_optimized"
-    if args.ensemble:
-        experiment_name += "_ensemble"
-    experiment_name += "_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Log experiment
+    experiment_name = model_name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S")
     params = {
         "model_type": args.model_type,
         "ensemble": args.ensemble,
         "optimize": args.optimize,
         "n_trials": args.n_trials if args.optimize else None,
         "timeout": args.timeout if args.optimize else None,
-        "random_state": RANDOM_STATE
+        "random_state": RANDOM_STATE,
+        "output_dir": str(model_output_dir)
     }
     log_file = log_experiment(experiment_name, metrics, params)
     print(f"Experiment logged at: {log_file}")
@@ -160,7 +190,7 @@ if __name__ == "__main__":
                        help='Optimization timeout in seconds')
     
     # Output arguments
-    parser.add_argument('--team_name', type=str, default='dataflow_team',
+    parser.add_argument('--team_name', type=str, default='dataflow',
                        help='Team name for submission file')
     parser.add_argument('--save_model', action='store_true',
                        help='Save trained model')
@@ -169,5 +199,3 @@ if __name__ == "__main__":
     
     # Run pipeline
     trainer, metrics = main(args)
-
-    
