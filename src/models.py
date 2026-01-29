@@ -128,8 +128,8 @@ class ModelTrainer:
             X_encoded = self._encode_categorical_features(X, categorical_cols, is_training=False)
             predictions = self.model.predict(X_encoded)
         
-        predictions = np.maximum(predictions, 0)
-        predictions = np.round(predictions).astype(int)
+        predictions = np.maximum(predictions, 0.0)
+        predictions = np.round(predictions).astype(float)
         
         return predictions
     
@@ -170,8 +170,8 @@ class EnsembleModel:
             pred = model.predict(X, categorical_cols)
             predictions += pred * weight
         
-        predictions = np.maximum(predictions, 0)
-        predictions = np.round(predictions).astype(int)
+        predictions = np.maximum(predictions, 0.0)
+        predictions = np.round(predictions).astype(float)
         
         return predictions
 

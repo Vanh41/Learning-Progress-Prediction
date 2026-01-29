@@ -14,6 +14,7 @@ class FeatureEngineer:
         df = self._create_temporal_features(df)
         df = self._create_performance_features(df)
         df = self._create_aggregated_features(df)
+        df = self._create_creative_features(df)
         
         return df
     
@@ -76,6 +77,65 @@ class FeatureEngineer:
             df['gpa_fair'] = ((df['GPA'] >= 2.5) & (df['GPA'] < 3.2)).astype(int)
             df['gpa_poor'] = (df['GPA'] < 2.5).astype(int)
         
+        return df
+    
+    def _create_creative_features(self, df):
+        """
+        Tạo các biến đặc thù (Creative Features) để bắt hành vi và tâm lý sinh viên.
+        """
+        # 1. BIẾN SỨC Ì HỌC THUẬT (GPA Efficiency)
+        # Sinh viên đạt GPA cao trên nền tải trọng nặng (đăng ký nhiều tín) -> Năng lực tốt
+        if 'GPA' in df.columns and 'TC_DANGKY' in df.columns and 'HOC_KY' in df.columns:
+            # Tính trung bình tín chỉ đăng ký của toàn khóa trong kỳ đó (làm mẫu số)
+            # Lưu ý: transform('mean') sẽ tính mean của nhóm HOC_KY gán cho từng dòng
+            mean_reg_by_sem = df.groupby('HOC_KY')['TC_DANGKY'].transform('mean')
+            
+            # Chỉ số hiệu quả = GPA / Tỷ lệ tải trọng (tránh chia cho 0)
+            # Tải trọng > 1 nghĩa là đăng ký nhiều hơn trung bình
+            load_ratio = df['TC_DANGKY'] / (mean_reg_by_sem + 1e-5)
+            df['gpa_efficiency_index'] = df['GPA'] * load_ratio
+
+        # 2. BIẾN "CÚ SỐC ĐẦU VÀO" (Admission Shock - Career Misalignment)
+        # Kiểm tra xem sinh viên thi khối Xã hội (C, D) nhưng học ngành Kỹ thuật (ví dụ)
+        if 'TOHOP_XT' in df.columns:
+            # Giả định các khối Tự nhiên gốc
+            natural_blocks = ['A00', 'A01', 'B00', 'B08']
+            # Tạo cờ: 1 nếu thi khối tự nhiên, 0 nếu khối khác
+            df['is_natural_science_entry'] = df['TOHOP_XT'].isin(natural_blocks).astype(int)
+
+        # 3. BIẾN PHẢN ỨNG SAU THẤT BẠI (Post-Failure Reaction)
+        # Xem sinh viên làm gì sau khi rớt môn?
+        if 'TC_DANGKY' in df.columns and 'TC_HOANTHANH' in df.columns:
+            # Tính lượng thay đổi tín chỉ đăng ký so với kỳ trước
+            df['prev_tc_dangky'] = df.groupby('MA_SO_SV')['TC_DANGKY'].shift(1).fillna(0)
+            df['tc_reg_delta'] = df['TC_DANGKY'] - df['prev_tc_dangky']
+            
+            # Kiểm tra kỳ trước có rớt môn không
+            df['prev_tc_hoanthanh'] = df.groupby('MA_SO_SV')['TC_HOANTHANH'].shift(1).fillna(0)
+            df['had_failure_last_sem'] = (df['prev_tc_hoanthanh'] < df['prev_tc_dangky']).astype(int)
+            
+            # Flag "Nóng vội": Kỳ trước rớt môn + Kỳ này tăng mạnh số tín chỉ (>3 tín)
+            # Đây là hành vi rủi ro cao (cố học trả nợ nhưng dễ gãy tiếp)
+            df['aggressive_recovery_flag'] = ((df['had_failure_last_sem'] == 1) & 
+                                            (df['tc_reg_delta'] > 3)).astype(int)
+
+        # 4. BIẾN ĐÚNG TIẾN ĐỘ (On-Track Proxy)
+        # So sánh năm học hiện tại với năm tuyển sinh
+        if 'HOC_KY' in df.columns and 'NAM_TUYENSINH' in df.columns:
+            # Lấy năm của học kỳ (ví dụ: 'HK1 2023-2024' -> 2023)
+            # Giả sử hàm parse_semester_code trả về (year, sem)
+            df['current_year'] = df['HOC_KY'].apply(lambda x: int(x.split()[1].split('-')[0]) if isinstance(x, str) else 2020)
+            
+            # Sinh viên năm thứ mấy
+            df['student_year_num'] = df['current_year'] - df['NAM_TUYENSINH'] + 1
+            
+            # Nếu năm thứ > 4 (hoặc 5 tùy ngành) -> Nguy cơ cao ("Sinh viên già")
+            df['is_overdue_student'] = (df['student_year_num'] > 4).astype(int)
+
+        # Clean up các cột tạm
+        drop_cols = ['prev_tc_dangky', 'prev_tc_hoanthanh', 'tc_reg_delta', 'current_year', 'student_year_num']
+        df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
+            
         return df
     
     def _create_aggregated_features(self, df):
