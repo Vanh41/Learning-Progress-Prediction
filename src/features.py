@@ -15,6 +15,9 @@ class FeatureEngineer:
         df = self._create_performance_features(df)
         df = self._create_aggregated_features(df)
         df = self._create_creative_features(df)
+        # [NEW] Nhóm biến xu hướng & so sánh
+        # df = self._create_trend_features(df)
+        # df = self._create_cohort_features(df)
         
         return df
     

@@ -129,7 +129,7 @@ class ModelTrainer:
             predictions = self.model.predict(X_encoded)
         
         predictions = np.maximum(predictions, 0.0)
-        predictions = np.round(predictions).astype(float)
+        # predictions = np.round(predictions).astype(float)
         
         return predictions
     
@@ -171,7 +171,7 @@ class EnsembleModel:
             predictions += pred * weight
         
         predictions = np.maximum(predictions, 0.0)
-        predictions = np.round(predictions).astype(float)
+        # predictions = np.round(predictions).astype(float)
         
         return predictions
 

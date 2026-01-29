@@ -131,7 +131,7 @@ def main(args):
         # Save submission to model-specific directory
         submission = pd.DataFrame({
             'MA_SO_SV': test_df['MA_SO_SV'],
-            'PRED_TC_HOANTHANH': y_pred_test.astype(int)
+            'PRED_TC_HOANTHANH': y_pred_test.astype(float)
         })
         submission_path = model_output_dir / f'{args.team_name}_submission.csv'
         submission.to_csv(submission_path, index=False)
