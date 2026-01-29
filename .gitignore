@@ -5,7 +5,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
+output
+catboost_info
 # Virtual Environment (Tên các thư mục môi trường ảo phổ biến)
 env/
 venv/
