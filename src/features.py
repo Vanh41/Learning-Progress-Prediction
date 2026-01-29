@@ -1,7 +1,17 @@
 import pandas as pd
 import numpy as np
+from scipy.stats import linregress  
 from .utils import calculate_semester_from_admission, parse_semester_code
 
+# Thêm hàm này vào trước class FeatureEngineer
+def calculate_slope(series):
+    y = series.dropna()
+    if len(y) < 2:
+        return 0.0
+    x = np.arange(len(y))
+    # Tính nhanh hệ số góc
+    slope, _, _, _, _ = linregress(x, y)
+    return slope
 
 class FeatureEngineer:    
     def __init__(self):
@@ -15,6 +25,7 @@ class FeatureEngineer:
         df = self._create_performance_features(df)
         df = self._create_aggregated_features(df)
         df = self._create_creative_features(df)
+        df = self._create_advanced_features(df)
         # [NEW] Nhóm biến xu hướng & so sánh
         # df = self._create_trend_features(df)
         # df = self._create_cohort_features(df)
@@ -139,6 +150,50 @@ class FeatureEngineer:
         drop_cols = ['prev_tc_dangky', 'prev_tc_hoanthanh', 'tc_reg_delta', 'current_year', 'student_year_num']
         df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
             
+        return df
+    
+    def _create_advanced_features(self, df):
+        """
+        Tạo các biến nâng cao: Z-Score, Trend Slope, Volatility
+        """
+        # Đảm bảo sort đúng để dùng rolling window
+        if 'MA_SO_SV' in df.columns and 'HOC_KY' in df.columns:
+            # Lưu ý: Sort ở đây chỉ tạm thời cho tính toán, cẩn thận không làm sai lệch index gốc nếu cần
+            df = df.sort_values(['MA_SO_SV', 'HOC_KY'])
+
+        # 1. GPA Z-Score (So sánh với mặt bằng chung của kỳ học đó)
+        if 'GPA' in df.columns and 'HOC_KY' in df.columns:
+            # Tính Mean và Std của GPA theo từng kỳ (HOC_KY)
+            # transform giúp map giá trị ngược lại kích thước ban đầu của df
+            sem_mean = df.groupby('HOC_KY')['GPA'].transform('mean')
+            sem_std = df.groupby('HOC_KY')['GPA'].transform('std')
+            
+            df['gpa_zscore'] = (df['GPA'] - sem_mean) / (sem_std + 1e-5)
+            
+            # Xếp hạng phần trăm trong kỳ
+            df['gpa_percentile'] = df.groupby('HOC_KY')['GPA'].transform(lambda x: x.rank(pct=True))
+
+        # 2. GPA Volatility (Độ ổn định - Std tích lũy)
+        if 'GPA' in df.columns:
+            df['gpa_volatility'] = df.groupby('MA_SO_SV')['GPA'].expanding().std().reset_index(level=0, drop=True)
+            df['gpa_volatility'] = df['gpa_volatility'].fillna(0)
+
+        # 3. GPA Trend Slope (Xu hướng: đang tiến bộ hay thụt lùi)
+        # Lưu ý: Tính toán này có thể chậm với dữ liệu lớn
+        if 'GPA' in df.columns:
+            # Tính trung bình 3 kỳ gần nhất để làm mượt
+            df['gpa_last_3_avg'] = df.groupby('MA_SO_SV')['GPA'].transform(
+                lambda x: x.rolling(window=3, min_periods=1).mean()
+            )
+            
+            # Tính slope trên cửa sổ 4 kỳ
+            # Chú ý: Cần import calculate_slope đã định nghĩa ở trên
+            # Để tối ưu tốc độ, có thể comment phần này nếu dữ liệu quá lớn > 500k dòng
+            df['gpa_trend_slope'] = df.groupby('MA_SO_SV')['GPA'].transform(
+                lambda x: x.rolling(window=4, min_periods=2).apply(calculate_slope, raw=False)
+            )
+            df['gpa_trend_slope'] = df['gpa_trend_slope'].fillna(0)
+
         return df
     
     def _create_aggregated_features(self, df):

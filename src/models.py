@@ -129,6 +129,8 @@ class ModelTrainer:
             predictions = self.model.predict(X_encoded)
         
         predictions = np.maximum(predictions, 0.0)
+        if isinstance(X, pd.DataFrame) and 'TC_DANGKY' in X.columns:
+             predictions = np.minimum(predictions, X['TC_DANGKY'].values)
         # predictions = np.round(predictions).astype(float)
         
         return predictions
