@@ -16,11 +16,13 @@ class OptunaOptimizer:
         self.study = None
         
     def _objective(self, trial, X_train, y_train, X_valid, y_valid, categorical_cols):
+        """Objective function for Optuna optimization"""
+        
         if self.model_type == 'xgboost':
             params = {
                 'max_depth': trial.suggest_int('max_depth', 3, 10),
                 'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-                'n_estimators': trial.suggest_int('n_estimators', 50, 500),
+                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
                 'min_child_weight': trial.suggest_int('min_child_weight', 1, 10),
                 'subsample': trial.suggest_float('subsample', 0.6, 1.0),
                 'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
@@ -34,21 +36,22 @@ class OptunaOptimizer:
             params = {
                 'max_depth': trial.suggest_int('max_depth', 3, 10),
                 'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-                'n_estimators': trial.suggest_int('n_estimators', 50, 500),
+                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
                 'num_leaves': trial.suggest_int('num_leaves', 20, 150),
                 'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
                 'subsample': trial.suggest_float('subsample', 0.6, 1.0),
                 'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
                 'reg_alpha': trial.suggest_float('reg_alpha', 0, 10),
                 'reg_lambda': trial.suggest_float('reg_lambda', 0, 10),
-                'random_state': RANDOM_STATE
+                'random_state': RANDOM_STATE,
+                'verbose': -1
             }
             
         elif self.model_type == 'catboost':
             params = {
                 'depth': trial.suggest_int('depth', 4, 10),
                 'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-                'iterations': trial.suggest_int('iterations', 50, 500),
+                'iterations': trial.suggest_int('iterations', 100, 500),
                 'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1, 10),
                 'border_count': trial.suggest_int('border_count', 32, 255),
                 'random_state': RANDOM_STATE,
@@ -58,7 +61,7 @@ class OptunaOptimizer:
         elif self.model_type == 'random_forest':
             params = {
                 'max_depth': trial.suggest_int('max_depth', 3, 20),
-                'n_estimators': trial.suggest_int('n_estimators', 50, 500),
+                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
                 'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
                 'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
                 'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2']),
@@ -67,18 +70,24 @@ class OptunaOptimizer:
         else:
             raise ValueError(f"Optimization not implemented for {self.model_type}")
         
+        # Train model with these params
         trainer = ModelTrainer(self.model_type, params)
         trainer.train(X_train, y_train, X_valid, y_valid, categorical_cols)
         
+        # Evaluate on validation set
         y_pred = trainer.predict(X_valid, categorical_cols)
         
+        # Calculate RMSE (minimize this)
         metrics = calculate_metrics(y_valid, y_pred)
         rmse = metrics['RMSE']
         
         return rmse
     
     def optimize(self, X_train, y_train, X_valid, y_valid, categorical_cols=None):
-        print(f"Starting hyperparameter optimization for {self.model_type}...")
+        """Run hyperparameter optimization"""
+        print(f"\n{'='*60}")
+        print(f"Starting Hyperparameter Optimization for {self.model_type}")
+        print(f"{'='*60}")
         print(f"Number of trials: {self.n_trials}")
         print(f"Timeout: {self.timeout} seconds")
         
@@ -96,19 +105,26 @@ class OptunaOptimizer:
         
         self.best_params = self.study.best_params
         
-        print(f"\nOptimization completed!")
+        print(f"\n{'='*60}")
+        print(f"Optimization Completed!")
+        print(f"{'='*60}")
         print(f"Best RMSE: {self.study.best_value:.4f}")
-        print(f"Best parameters: {self.best_params}")
+        print(f"Best parameters:")
+        for key, value in self.best_params.items():
+            print(f"  {key}: {value}")
+        print(f"{'='*60}\n")
         
         return self.best_params
     
     def get_best_model(self):
+        """Get model with best parameters"""
         if self.best_params is None:
             raise ValueError("Optimization has not been run yet")
         
         return ModelTrainer(self.model_type, self.best_params)
     
     def plot_optimization_history(self, save_path=None):
+        """Plot optimization history"""
         if self.study is None:
             raise ValueError("Optimization has not been run yet")
         
@@ -120,9 +136,10 @@ class OptunaOptimizer:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"Optimization history saved to: {save_path}")
         
-        plt.show()
+        plt.close()
     
     def plot_param_importances(self, save_path=None):
+        """Plot parameter importances"""
         if self.study is None:
             raise ValueError("Optimization has not been run yet")
         
@@ -134,11 +151,12 @@ class OptunaOptimizer:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"Parameter importances saved to: {save_path}")
         
-        plt.show()
+        plt.close()
 
 
 def optimize_model(model_type, X_train, y_train, X_valid, y_valid, categorical_cols=None, 
                    n_trials=OPTUNA_N_TRIALS, timeout=OPTUNA_TIMEOUT):
+    """Convenience function to run optimization"""
     optimizer = OptunaOptimizer(model_type, n_trials, timeout)
     best_params = optimizer.optimize(X_train, y_train, X_valid, y_valid, categorical_cols)
     best_model = optimizer.get_best_model()

@@ -35,32 +35,59 @@ N_SPLITS = 5
 DEFAULT_PARAMS = {
     'xgboost': {
         'max_depth': 6,
-        'learning_rate': 0.1,
-        'n_estimators': 100,
-        'random_state': RANDOM_STATE
+        'learning_rate': 0.05,
+        'n_estimators': 200,
+        'min_child_weight': 3,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'gamma': 0.1,
+        'reg_lambda': 0.1,
+        'random_state': RANDOM_STATE,
+        'n_jobs': -1
     },
     'lightgbm': {
         'max_depth': 6,
-        'learning_rate': 0.1,
-        'n_estimators': 100,
-        'random_state': RANDOM_STATE
+        'learning_rate': 0.05,
+        'n_estimators': 200,
+        'num_leaves': 31,
+        'min_child_samples': 20,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'reg_alpha': 0.5,
+        'reg_lambda': 1.0,
+        'random_state': RANDOM_STATE,
+        'n_jobs': -1,
+        'verbose': -1
     },
     'catboost': {
         'depth': 6,
-        'learning_rate': 0.1,
-        'iterations': 100,
+        'learning_rate': 0.05,
+        'iterations': 200,
+        'l2_leaf_reg': 3.0,
         'random_state': RANDOM_STATE,
-        'verbose': False
+        'verbose': False,
+        'thread_count': -1
+    },
+    'random_forest': {
+        'max_depth': 10,            
+        'n_estimators': 200,
+        'min_samples_split': 10,   
+        'min_samples_leaf': 5,      
+        'max_features': 'sqrt',
+        'random_state': RANDOM_STATE,
+        'n_jobs': -1
     }
 }
 
-OPTUNA_N_TRIALS = 50
-OPTUNA_TIMEOUT = 3600 
+OPTUNA_N_TRIALS = 100
+OPTUNA_TIMEOUT = 7200 
 
 FEATURE_GROUPS = {
     'admission': ['NAM_TUYENSINH', 'PTXT', 'TOHOP_XT', 'DIEM_TRUNGTUYEN', 'DIEM_CHUAN'],
-    'academic': ['HOC_KY', 'CPA', 'GPA', 'TC_DANGKY', 'TC_HOANTHANH'],
-    'engineered': []  
+    'academic': ['HOC_KY', 'CPA', 'GPA', 'TC_DANGKY'],
+    'engineered': [] 
 }
 
-METRICS = ['R2', 'RMSE', 'MSE', 'MAPE']
+METRICS = ['RMSE']
+
+EARLY_STOPPING_ROUNDS = 50
