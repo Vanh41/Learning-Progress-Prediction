@@ -30,14 +30,6 @@ wheels/
 .installed.cfg
 *.egg
 
-# -------------------------------------------------------------------------
-# 2. DATA (QUAN TRỌNG NHẤT: Không bao giờ up data lên Git)
-# -------------------------------------------------------------------------
-# Chặn tất cả file trong folder data...
-data/raw/*
-data/processed/*
-data/external/*
-
 # ...Nhưng giữ lại file .gitkeep để Git vẫn tạo folder trống cho thành viên khác
 !data/raw/.gitkeep
 !data/processed/.gitkeep
