@@ -53,6 +53,7 @@ models/*.json
 models/*.joblib
 models/*.pt
 models/*.pth
+nhap
 
 # File kết quả output
 output/submission/*
