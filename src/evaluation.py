@@ -20,20 +20,20 @@ def calculate_metrics(y_true, y_pred):
             f"Shape mismatch: y_true={y_true.shape}, y_pred={y_pred.shape}"
         )
     
-    r2 = r2_score(y_true, y_pred)
+    # r2 = r2_score(y_true, y_pred)
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-    mse = mean_squared_error(y_true, y_pred)
-    mae = mean_absolute_error(y_true, y_pred)
+    # mse = mean_squared_error(y_true, y_pred)
+    # mae = mean_absolute_error(y_true, y_pred)
     
     mask = y_true != 0
     mape = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100 if mask.sum() > 0 else 0
     
     metrics = {
-        'R2': r2,
+        # 'R2': r2,
         'RMSE': rmse,
-        'MSE': mse,
-        'MAE': mae,
-        'MAPE': mape
+        # 'MSE': mse,
+        # 'MAE': mae,
+        # 'MAPE': mape
     }
     
     return metrics

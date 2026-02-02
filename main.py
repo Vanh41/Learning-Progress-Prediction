@@ -14,9 +14,12 @@ from src.utils import log_experiment
 from datetime import datetime
 
 
-
 def main(args):
-    print("LEARNING PROGRESS PREDICTION - DATAFLOW TEAM")
+    """Main pipeline for learning progress prediction"""
+    
+    print("="*80)
+    print("LEARNING PROGRESS PREDICTION - DATAFLOW 2026")
+    print("="*80)
     set_seed(RANDOM_STATE)
     
     # Determine model name for output directory
@@ -32,23 +35,42 @@ def main(args):
     model_output_dir = get_model_output_dir(model_name)
     print(f"\nModel output directory: {model_output_dir}")
     
-    # Step 1: Load and prepare data
-    print("\n[STEP 1] Loading and preparing data...")
+    # =========================================================================
+    # STEP 1: Load and prepare data
+    # =========================================================================
+    print("\n" + "="*80)
+    print("[STEP 1] Loading and preparing data...")
+    print("="*80)
     train_df, valid_df, test_df = load_and_prepare_data()
     
-    # Step 2: Feature engineering
-    print("\n[STEP 2] Creating features...")
+    print(f"\nData loaded successfully:")
+    print(f"  Train: {train_df.shape}")
+    print(f"  Valid: {valid_df.shape}")
+    if test_df is not None:
+        print(f"  Test: {test_df.shape}")
+    
+    # =========================================================================
+    # STEP 2: Feature engineering
+    # =========================================================================
+    print("\n" + "="*80)
+    print("[STEP 2] Creating features...")
+    print("="*80)
     X_train, X_valid, y_train, y_valid, feature_cols, categorical_cols = prepare_features_for_modeling(
         train_df, valid_df
     )
     
-    print(f"Training set: {X_train.shape}")
-    print(f"Validation set: {X_valid.shape}")
-    print(f"Number of features: {len(feature_cols)}")
-    print(f"Categorical features: {categorical_cols}")
+    print(f"\nFeature engineering completed:")
+    print(f"  Training set: {X_train.shape}")
+    print(f"  Validation set: {X_valid.shape}")
+    print(f"  Number of features: {len(feature_cols)}")
+    print(f"  Categorical features ({len(categorical_cols)}): {categorical_cols}")
     
-    # Step 3: Model training
-    print("\n[STEP 3] Training model...")
+    # =========================================================================
+    # STEP 3: Model training
+    # =========================================================================
+    print("\n" + "="*80)
+    print("[STEP 3] Training model...")
+    print("="*80)
     
     if args.optimize:
         # Hyperparameter optimization
@@ -85,10 +107,14 @@ def main(args):
         trainer = create_model(args.model_type)
         trainer.train(X_train, y_train, X_valid, y_valid, categorical_cols)
     
-    # Step 4: Evaluation
-    print("\n[STEP 4] Evaluating model...")
+    # =========================================================================
+    # STEP 4: Evaluation
+    # =========================================================================
+    print("\n" + "="*80)
+    print("[STEP 4] Evaluating model...")
+    print("="*80)
     
-    # Predictions on validation set
+    # Predictions on validation set (keep as float)
     y_pred_valid = trainer.predict(X_valid, categorical_cols)
     
     # Create evaluation report (save to model-specific directory)
@@ -96,17 +122,21 @@ def main(args):
         y_valid, y_pred_valid,
         feature_names=feature_cols if not args.ensemble else None,
         model=trainer.model if not args.ensemble else None,
-        save_dir=model_output_dir  # ← Key change: pass model-specific directory
+        save_dir=model_output_dir
     )
     
     # Save metrics to file
     metrics_df = pd.DataFrame([metrics])
     metrics_df.to_csv(model_output_dir / 'metrics.csv', index=False)
-    print(f"Metrics saved to: {model_output_dir / 'metrics.csv'}")
+    print(f"\nMetrics saved to: {model_output_dir / 'metrics.csv'}")
     
-    # Step 5: Predictions on test set
+    # =========================================================================
+    # STEP 5: Predictions on test set
+    # =========================================================================
     if test_df is not None and len(test_df) > 0:
-        print("\n[STEP 5] Making predictions on test set...")
+        print("\n" + "="*80)
+        print("[STEP 5] Making predictions on test set...")
+        print("="*80)
         
         # Create features for test set
         engineer = FeatureEngineer()
@@ -116,6 +146,7 @@ def main(args):
         missing_cols = set(feature_cols) - set(test_features.columns)
         for col in missing_cols:
             test_features[col] = 0
+            print(f"  Added missing column: {col}")
 
         # Ensure test features have same columns as training
         X_test = test_features[feature_cols]
@@ -125,32 +156,48 @@ def main(args):
             if col in X_test.columns:
                 X_test[col] = X_test[col].astype(str).fillna("missing")
 
-        # Make predictions
+        # Make predictions (keep as float)
         y_pred_test = trainer.predict(X_test, categorical_cols)
         
-        # Save submission to model-specific directory
+        print(f"\nTest predictions statistics:")
+        print(f"  Mean: {y_pred_test.mean():.2f}")
+        print(f"  Std: {y_pred_test.std():.2f}")
+        print(f"  Min: {y_pred_test.min():.2f}")
+        print(f"  Max: {y_pred_test.max():.2f}")
+        
+        # Save submission to model-specific directory (keep as float)
         submission = pd.DataFrame({
             'MA_SO_SV': test_df['MA_SO_SV'],
-            'PRED_TC_HOANTHANH': y_pred_test.astype(float)
+            'PRED_TC_HOANTHANH': y_pred_test  # Keep as float, don't convert to int
         })
         submission_path = model_output_dir / f'{args.team_name}_submission.csv'
         submission.to_csv(submission_path, index=False)
         
-        print(f"Submission saved to: {submission_path}")
+        print(f"\nSubmission saved to: {submission_path}")
+        print(f"First few predictions:")
+        print(submission.head(10))
     
-    # Step 6: Save model
+    # =========================================================================
+    # STEP 6: Save model
+    # =========================================================================
     if args.save_model:
-        print("\n[STEP 6] Saving model...")
+        print("\n" + "="*80)
+        print("[STEP 6] Saving model...")
+        print("="*80)
         model_filename = f"{model_name}_model.pkl"
         model_path = model_output_dir / model_filename
         
-        # Use custom save since we want to save to model-specific directory
+        # Use joblib to save
         import joblib
         joblib.dump(trainer, model_path)
         print(f"Model saved to: {model_path}")
     
+    # =========================================================================
+    # Final summary
+    # =========================================================================
     print("\n" + "="*80)
     print("PIPELINE COMPLETED SUCCESSFULLY!")
+    print("="*80)
     print(f"All outputs saved to: {model_output_dir}")
     print("="*80)
 
@@ -170,9 +217,25 @@ def main(args):
     
     return trainer, metrics
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Learning Progress Prediction Pipeline')
+    parser = argparse.ArgumentParser(
+        description='Learning Progress Prediction Pipeline',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Train default XGBoost model
+  python main.py --save_model
+  
+  # Train specific model
+  python main.py --model_type lightgbm --save_model
+  
+  # Train ensemble
+  python main.py --ensemble --save_model
+  
+  # Optimize hyperparameters
+  python main.py --optimize --model_type xgboost --n_trials 100 --save_model
+        """
+    )
     
     # Model arguments
     parser.add_argument('--model_type', type=str, default='xgboost',

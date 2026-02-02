@@ -42,10 +42,12 @@ def load_data():
 
 try:
     train_df, valid_df, test_df = load_data()
-    
+    from src.utils import get_semester_order
+    train_df['semester_order']=train_df['HOC_KY'].apply(get_semester_order)
+
     # Create features
     engineer = FeatureEngineer()
-    valid_df = engineer.create_features(valid_df, is_training=False)
+    valid_df = engineer.create_features(valid_df)
     
 except Exception as e:
     st.error(f"Error loading data: {e}")
@@ -406,7 +408,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center'>
-        <p>Learning Progress Prediction Dashboard | DATAFLOW Team | DATAFLOW 2026</p>
+        <p>Learning Progress Prediction Dashboard | Multour | DATAFLOW 2026</p>
     </div>
     """,
     unsafe_allow_html=True

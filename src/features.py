@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import linregress  
 from .utils import calculate_semester_from_admission, parse_semester_code
+from .utils import calculate_semester_from_admission, parse_semester_code, fast_slope, get_semester_order
 
 # Thêm hàm này vào trước class FeatureEngineer
 def calculate_slope(series):
@@ -15,287 +16,200 @@ def calculate_slope(series):
 
 class FeatureEngineer:    
     def __init__(self):
-        self.feature_names = []
+        self.feature_names = ['TOHOP_XT', 'PTXT', 'MA_NGANH']
         
     def create_features(self, df, is_training=True):
         df = df.copy()
-        df = self._create_admission_features(df)
-        df = self._create_academic_features(df)
-        df = self._create_temporal_features(df)
-        df = self._create_performance_features(df)
-        df = self._create_aggregated_features(df)
-        df = self._create_creative_features(df)
-        df = self._create_advanced_features(df)
-        # [NEW] Nhóm biến xu hướng & so sánh
-        # df = self._create_trend_features(df)
-        # df = self._create_cohort_features(df)
+        if 'HOC_KY' in df.columns:
+            df['year'], df['sem'] = zip(*df['HOC_KY'].apply(parse_semester_code))
+            df['semester_order'] = df['year'] * 10 + df['sem']
+            df = df.sort_values(['MA_SO_SV', 'semester_order']).reset_index(drop=True)
+        for col in self.feature_names:
+            if col in df.columns:
+                df[col] = df[col].astype(str).astype('category')
         
+        df['Prev_GPA'] = df.groupby('MA_SO_SV')['GPA'].shift(1).fillna(-1)
+        df['Prev_CPA'] = df.groupby('MA_SO_SV')['CPA'].shift(1).fillna(-1)
+        df['Prev_TC_HOANTHANH'] = df.groupby('MA_SO_SV')['TC_HOANTHANH'].shift(1).fillna(0)
+        df['Prev_TC_DANGKY'] = df.groupby('MA_SO_SV')['TC_DANGKY'].shift(1).fillna(0)
+        df['is_first_semester'] = (df['Prev_TC_DANGKY'] == 0).astype(int)
+        df['Prev_GPA'] = df['Prev_GPA'].fillna(-1)
+        df['Prev_CPA'] = df['Prev_CPA'].fillna(-1)
+        df = self._create_admission_features(df)
+        df = self._create_history_features(df)
+        df = self._create_temporal_features(df)
+        df = self._create_trend_features(df)
+        df = self._create_academic_features(df)
+        # 1. Expected Credits: Dự báo tín chỉ dựa trên tỷ lệ đậu lịch sử
+        grouped = df.groupby('MA_SO_SV')
+        if 'TC_DANGKY' in df.columns:
+            # Tỷ lệ đậu thực tế xuyên suốt lịch sử (ổn định hơn global_pass_rate cũ)
+            cum_ht = grouped['Prev_TC_HOANTHANH'].cumsum()
+            cum_dk = grouped['Prev_TC_DANGKY'].cumsum()
+            df['historical_pass_rate'] = (cum_ht / (cum_dk + 1e-5)).fillna(0.85)
+            
+            # Dự báo số TC sẽ đạt dựa trên phong độ quá khứ
+            df['expected_real_credits'] = df['TC_DANGKY'] * df['historical_pass_rate']
+            
+            # Risk Interaction: Áp lực kỳ này x Tỷ lệ rớt tích lũy
+            df['risk_score'] = df['TC_DANGKY'] * (1 - df['historical_pass_rate'])
+        # 5. Đột biến rớt (Recent Fail Spike)
+        df['recent_fail_spike'] = df['failed_last_sem'] * (df['TC_DANGKY'] - df['Prev_TC_HOANTHANH'])
+        # Dọn dẹp các cột tạm
+        df = df.drop(columns=['year', 'sem'], errors='ignore')
         return df
     
     def _create_admission_features(self, df):
         if 'DIEM_TRUNGTUYEN' in df.columns and 'DIEM_CHUAN' in df.columns:
             df['diem_vuot_chuan'] = df['DIEM_TRUNGTUYEN'] - df['DIEM_CHUAN']
-            df['diem_ratio'] = df['DIEM_TRUNGTUYEN'] / (df['DIEM_CHUAN'] + 0.01)
+            # df['diem_ratio'] = df['DIEM_TRUNGTUYEN'] / (df['DIEM_CHUAN'] + 0.01)
         
         if 'NAM_TUYENSINH' in df.columns:
-            df['nam_tuoi'] = 2024 - df['NAM_TUYENSINH']
+            df['nam_tuoi'] = 2025 - df['NAM_TUYENSINH']
         
         return df
     
     def _create_academic_features(self, df):        
-        if 'GPA' in df.columns and 'CPA' in df.columns:
-            df['gpa_cpa_diff'] = df['GPA'] - df['CPA']
-            df['gpa_cpa_ratio'] = df['GPA'] / (df['CPA'] + 0.01)
-        
         if 'TC_DANGKY' in df.columns:
-            df['tc_dangky_high'] = (df['TC_DANGKY'] > 20).astype(int)
-            df['tc_dangky_low'] = (df['TC_DANGKY'] < 15).astype(int)
-        
-        if 'TC_HOANTHANH' in df.columns and 'TC_DANGKY' in df.columns:
-            df['completion_rate'] = df['TC_HOANTHANH'] / (df['TC_DANGKY'] + 0.01)
-            df['tc_failed'] = df['TC_DANGKY'] - df['TC_HOANTHANH']
-        
+            df['tc_dangky_high'] = (df['TC_DANGKY'] > 25).astype(int)
+            df['tc_dangky_low'] = (df['TC_DANGKY'] < 12).astype(int)
         return df
     
-    def _create_temporal_features(self, df):        
+    def _create_history_features(self, df):
+        df['prev_completion_rate'] = df['Prev_TC_HOANTHANH'] / (df['Prev_TC_DANGKY'] + 1)
+        if 'TC_DANGKY' in df.columns:
+            avg_capacity = df.groupby('MA_SO_SV')['Prev_TC_HOANTHANH'].transform(
+                lambda x: x.rolling(window=3, min_periods=1).mean()
+            ).fillna(15)
+
+            df['load_factor'] = df['TC_DANGKY'] / (avg_capacity + 1)
+            df['is_overloaded'] = (df['load_factor'] > 1.3).astype(int)
+
+            # Đánh dấu sinh viên rớt tín chỉ ở kỳ trước
+            df['failed_last_sem'] = (df['Prev_TC_HOANTHANH'] < df['Prev_TC_DANGKY']).astype(int)
+
+            # Phát hiện sinh viên đăng ký nhiều hơn kỳ trước trong khi vừa rớt
+            more_credits = (df['TC_DANGKY'] > df['Prev_TC_DANGKY'])
+            df['aggressive_recovery'] = (df['failed_last_sem'] & more_credits).astype(int)
+        return df
+
+    def _create_temporal_features(self, df):
         if 'HOC_KY' in df.columns and 'NAM_TUYENSINH' in df.columns:
             df['semester_number'] = df.apply(
-                lambda row: calculate_semester_from_admission(
-                    row['NAM_TUYENSINH'], 
-                    row['HOC_KY']
-                ) if pd.notna(row['HOC_KY']) else 0,
+                lambda row: calculate_semester_from_admission(row['NAM_TUYENSINH'], row['HOC_KY']),
                 axis=1
             )
-            
-            df['hoc_ky_nam'] = df['HOC_KY'].apply(
-                lambda x: parse_semester_code(x)[0] if pd.notna(x) else 0
-            )
-            df['hoc_ky_so'] = df['HOC_KY'].apply(
-                lambda x: parse_semester_code(x)[1] if pd.notna(x) else 0
-            )
-            
-            df['is_semester_2'] = (df['hoc_ky_so'] == 2).astype(int)
-            
+            df['is_semester_2'] = df['HOC_KY'].apply(lambda x: 1 if 'HK2' in str(x) else 0)
         return df
     
-    def _create_performance_features(self, df):
-        if 'CPA' in df.columns:
-            df['cpa_excellent'] = (df['CPA'] >= 3.6).astype(int)
-            df['cpa_good'] = ((df['CPA'] >= 3.2) & (df['CPA'] < 3.6)).astype(int)
-            df['cpa_fair'] = ((df['CPA'] >= 2.5) & (df['CPA'] < 3.2)).astype(int)
-            df['cpa_poor'] = (df['CPA'] < 2.5).astype(int)
-        
-        if 'GPA' in df.columns:
-            df['gpa_excellent'] = (df['GPA'] >= 3.6).astype(int)
-            df['gpa_good'] = ((df['GPA'] >= 3.2) & (df['GPA'] < 3.6)).astype(int)
-            df['gpa_fair'] = ((df['GPA'] >= 2.5) & (df['GPA'] < 3.2)).astype(int)
-            df['gpa_poor'] = (df['GPA'] < 2.5).astype(int)
-        
+    def _create_trend_features(self, df):
+        grouped = df.groupby('MA_SO_SV')
+        if 'Prev_GPA' in df.columns:
+            # Xu hướng điểm số (Slope)
+            df['gpa_trend_slope'] = grouped['Prev_GPA'].transform(
+                lambda x: x.rolling(window=3, min_periods=2).apply(fast_slope, raw=True)
+            ).fillna(0)
+        if 'Prev_TC_DANGKY' in df.columns:
+            cum_dangky = grouped['Prev_TC_DANGKY'].cumsum()
+            cum_hoanthanh = grouped['Prev_TC_HOANTHANH'].cumsum()
+            df['total_credits_failed'] = cum_dangky - cum_hoanthanh
+            df['accumulated_fail_ratio'] = df['total_credits_failed'] / (cum_dangky + 1e-5)
         return df
     
-    def _create_creative_features(self, df):
+    def create_test_features(self, test_df, train_df, test_semester='HK1 2024-2025'):
         """
-        Tạo các biến đặc thù (Creative Features) để bắt hành vi và tâm lý sinh viên.
+        Tạo feature cho tập Test bằng cách nối với lịch sử để tính toán các biến lũy kế.
         """
-        # 1. BIẾN SỨC Ì HỌC THUẬT (GPA Efficiency)
-        # Sinh viên đạt GPA cao trên nền tải trọng nặng (đăng ký nhiều tín) -> Năng lực tốt
-        if 'GPA' in df.columns and 'TC_DANGKY' in df.columns and 'HOC_KY' in df.columns:
-            # Tính trung bình tín chỉ đăng ký của toàn khóa trong kỳ đó (làm mẫu số)
-            # Lưu ý: transform('mean') sẽ tính mean của nhóm HOC_KY gán cho từng dòng
-            mean_reg_by_sem = df.groupby('HOC_KY')['TC_DANGKY'].transform('mean')
-            
-            # Chỉ số hiệu quả = GPA / Tỷ lệ tải trọng (tránh chia cho 0)
-            # Tải trọng > 1 nghĩa là đăng ký nhiều hơn trung bình
-            load_ratio = df['TC_DANGKY'] / (mean_reg_by_sem + 1e-5)
-            df['gpa_efficiency_index'] = df['GPA'] * load_ratio
+        print(f"Creating test features for {test_semester}...")
 
-        # 2. BIẾN "CÚ SỐC ĐẦU VÀO" (Admission Shock - Career Misalignment)
-        # Kiểm tra xem sinh viên thi khối Xã hội (C, D) nhưng học ngành Kỹ thuật (ví dụ)
-        if 'TOHOP_XT' in df.columns:
-            # Giả định các khối Tự nhiên gốc
-            natural_blocks = ['A00', 'A01', 'B00', 'B08']
-            # Tạo cờ: 1 nếu thi khối tự nhiên, 0 nếu khối khác
-            df['is_natural_science_entry'] = df['TOHOP_XT'].isin(natural_blocks).astype(int)
-
-        # 3. BIẾN PHẢN ỨNG SAU THẤT BẠI (Post-Failure Reaction)
-        # Xem sinh viên làm gì sau khi rớt môn?
-        if 'TC_DANGKY' in df.columns and 'TC_HOANTHANH' in df.columns:
-            # Tính lượng thay đổi tín chỉ đăng ký so với kỳ trước
-            df['prev_tc_dangky'] = df.groupby('MA_SO_SV')['TC_DANGKY'].shift(1).fillna(0)
-            df['tc_reg_delta'] = df['TC_DANGKY'] - df['prev_tc_dangky']
-            
-            # Kiểm tra kỳ trước có rớt môn không
-            df['prev_tc_hoanthanh'] = df.groupby('MA_SO_SV')['TC_HOANTHANH'].shift(1).fillna(0)
-            df['had_failure_last_sem'] = (df['prev_tc_hoanthanh'] < df['prev_tc_dangky']).astype(int)
-            
-            # Flag "Nóng vội": Kỳ trước rớt môn + Kỳ này tăng mạnh số tín chỉ (>3 tín)
-            # Đây là hành vi rủi ro cao (cố học trả nợ nhưng dễ gãy tiếp)
-            df['aggressive_recovery_flag'] = ((df['had_failure_last_sem'] == 1) & 
-                                            (df['tc_reg_delta'] > 3)).astype(int)
-
-        # 4. BIẾN ĐÚNG TIẾN ĐỘ (On-Track Proxy)
-        # So sánh năm học hiện tại với năm tuyển sinh
-        if 'HOC_KY' in df.columns and 'NAM_TUYENSINH' in df.columns:
-            # Lấy năm của học kỳ (ví dụ: 'HK1 2023-2024' -> 2023)
-            # Giả sử hàm parse_semester_code trả về (year, sem)
-            df['current_year'] = df['HOC_KY'].apply(lambda x: int(x.split()[1].split('-')[0]) if isinstance(x, str) else 2020)
-            
-            # Sinh viên năm thứ mấy
-            df['student_year_num'] = df['current_year'] - df['NAM_TUYENSINH'] + 1
-            
-            # Nếu năm thứ > 4 (hoặc 5 tùy ngành) -> Nguy cơ cao ("Sinh viên già")
-            df['is_overdue_student'] = (df['student_year_num'] > 4).astype(int)
-
-        # Clean up các cột tạm
-        drop_cols = ['prev_tc_dangky', 'prev_tc_hoanthanh', 'tc_reg_delta', 'current_year', 'student_year_num']
-        df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
-            
-        return df
-    
-    def _create_advanced_features(self, df):
-        """
-        Tạo các biến nâng cao: Z-Score, Trend Slope, Volatility
-        """
-        # Đảm bảo sort đúng để dùng rolling window
-        if 'MA_SO_SV' in df.columns and 'HOC_KY' in df.columns:
-            # Lưu ý: Sort ở đây chỉ tạm thời cho tính toán, cẩn thận không làm sai lệch index gốc nếu cần
-            df = df.sort_values(['MA_SO_SV', 'HOC_KY'])
-
-        # 1. GPA Z-Score (So sánh với mặt bằng chung của kỳ học đó)
-        if 'GPA' in df.columns and 'HOC_KY' in df.columns:
-            # Tính Mean và Std của GPA theo từng kỳ (HOC_KY)
-            # transform giúp map giá trị ngược lại kích thước ban đầu của df
-            sem_mean = df.groupby('HOC_KY')['GPA'].transform('mean')
-            sem_std = df.groupby('HOC_KY')['GPA'].transform('std')
-            
-            df['gpa_zscore'] = (df['GPA'] - sem_mean) / (sem_std + 1e-5)
-            
-            # Xếp hạng phần trăm trong kỳ
-            df['gpa_percentile'] = df.groupby('HOC_KY')['GPA'].transform(lambda x: x.rank(pct=True))
-
-        # 2. GPA Volatility (Độ ổn định - Std tích lũy)
-        if 'GPA' in df.columns:
-            df['gpa_volatility'] = df.groupby('MA_SO_SV')['GPA'].expanding().std().reset_index(level=0, drop=True)
-            df['gpa_volatility'] = df['gpa_volatility'].fillna(0)
-
-        # 3. GPA Trend Slope (Xu hướng: đang tiến bộ hay thụt lùi)
-        # Lưu ý: Tính toán này có thể chậm với dữ liệu lớn
-        if 'GPA' in df.columns:
-            # Tính trung bình 3 kỳ gần nhất để làm mượt
-            df['gpa_last_3_avg'] = df.groupby('MA_SO_SV')['GPA'].transform(
-                lambda x: x.rolling(window=3, min_periods=1).mean()
-            )
-            
-            # Tính slope trên cửa sổ 4 kỳ
-            # Chú ý: Cần import calculate_slope đã định nghĩa ở trên
-            # Để tối ưu tốc độ, có thể comment phần này nếu dữ liệu quá lớn > 500k dòng
-            df['gpa_trend_slope'] = df.groupby('MA_SO_SV')['GPA'].transform(
-                lambda x: x.rolling(window=4, min_periods=2).apply(calculate_slope, raw=False)
-            )
-            df['gpa_trend_slope'] = df['gpa_trend_slope'].fillna(0)
-
-        return df
-    
-    def _create_aggregated_features(self, df):
-        if 'MA_SO_SV' in df.columns:
-            if 'semester_order' in df.columns:
-                df = df.sort_values(['MA_SO_SV', 'semester_order'])
-            else:
-                df = df.sort_values(['MA_SO_SV'])
-
-            
-            if 'TC_HOANTHANH' in df.columns:
-                df['total_tc_completed'] = df.groupby('MA_SO_SV')['TC_HOANTHANH'].cumsum()
-                df['total_tc_completed_lag1'] = df.groupby('MA_SO_SV')['total_tc_completed'].shift(1)
-                df['total_tc_completed_lag1'] = df['total_tc_completed_lag1'].fillna(0)
-            
-            if 'completion_rate' in df.columns:
-                df['avg_completion_rate'] = df.groupby('MA_SO_SV')['completion_rate'].expanding().mean().reset_index(0, drop=True)
-                df['avg_completion_rate_lag1'] = df.groupby('MA_SO_SV')['avg_completion_rate'].shift(1)
-                df['avg_completion_rate_lag1'] = df['avg_completion_rate_lag1'].bfill().fillna(0)
-            
-            if 'GPA' in df.columns:
-                df['avg_gpa'] = df.groupby('MA_SO_SV')['GPA'].expanding().mean().reset_index(0, drop=True)
-                df['avg_gpa_lag1'] = df.groupby('MA_SO_SV')['avg_gpa'].shift(1)
-                df['avg_gpa_lag1'] = df['avg_gpa_lag1'].bfill().fillna(0)
-
-            
-            df['num_previous_semesters'] = df.groupby('MA_SO_SV').cumcount()
-            
-            if 'GPA' in df.columns:
-                df['gpa_trend'] = df.groupby('MA_SO_SV')['GPA'].diff()
-                df['gpa_trend'] = df['gpa_trend'].fillna(0)
-                
-            if 'completion_rate' in df.columns:
-                df['completion_rate_trend'] = df.groupby('MA_SO_SV')['completion_rate'].diff()
-                df['completion_rate_trend'] = df['completion_rate_trend'].fillna(0)
+        # 1. Chuẩn bị tập test
+        test_df = test_df.copy()
+        test_df['HOC_KY'] = test_semester
         
-        return df
-    
-    def create_test_features(self, test_df, train_df):
-        train_df = self.create_features(train_df, is_training=True)
-        train_df = train_df.sort_values(['MA_SO_SV', 'semester_order'])
-        last_records = train_df.groupby('MA_SO_SV').last().reset_index()
-        
-        admission_info = train_df[['MA_SO_SV', 'NAM_TUYENSINH', 'PTXT', 'TOHOP_XT', 
-                                   'DIEM_TRUNGTUYEN', 'DIEM_CHUAN']].drop_duplicates('MA_SO_SV')
-        
-        test_features = test_df.merge(
-            admission_info,
-            on='MA_SO_SV',
-            how='left'
-        )
-        
-        test_features = test_features.merge(
-            last_records[['MA_SO_SV', 'CPA', 'GPA',
-                         'total_tc_completed_lag1', 'avg_completion_rate_lag1',
-                         'avg_gpa_lag1', 'num_previous_semesters']],
-            on='MA_SO_SV',
-            how='left',
-            suffixes=('', '_last')
-        )
-        
-        test_features['CPA'] = test_features['CPA'].fillna(0)
-        test_features['GPA'] = test_features['GPA'].fillna(0)
-        test_features['total_tc_completed_lag1'] = test_features['total_tc_completed_lag1'].fillna(0)
-        test_features['avg_completion_rate_lag1'] = test_features['avg_completion_rate_lag1'].fillna(0)
-        test_features['avg_gpa_lag1'] = test_features['avg_gpa_lag1'].fillna(0)
-        test_features['num_previous_semesters'] = test_features['num_previous_semesters'].fillna(0)
-        
-        test_features = self.create_features(test_features, is_training=False)
-        
+        # Giả định tập test chưa có GPA, CPA, TC_HOANTHANH (đối tượng cần dự báo)
+        # Ta gán nhãn tạm để có thể concat với train_df
+        for col in ['GPA', 'CPA', 'TC_HOANTHANH']:
+            if col not in test_df.columns:
+                test_df[col] = 0
+
+        # 2. Nối với lịch sử (train_df) để tính toán các biến trễ (Lag) và lũy kế (Cumulative)
+        full_df = pd.concat([train_df, test_df], axis=0, ignore_index=True)
+
+        # 3. Chạy toàn bộ pipeline tạo feature
+        full_feat = self.create_features(full_df)
+
+        # 4. Trích xuất đúng các dòng thuộc về học kỳ test
+        test_order = get_semester_order(test_semester)
+        test_features = full_feat[full_feat['semester_order'] == test_order].copy()
+
+        # 5. Loại bỏ các cột target tạm thời
+        cols_to_drop = ['TC_HOANTHANH', 'GPA', 'CPA']
+        test_features = test_features.drop(columns=[c for c in cols_to_drop if c in test_features.columns])
+
+        print(f"Test features created: {test_features.shape}")
         return test_features
+
     
     def get_feature_columns(self, df, exclude_cols=None):
-        if exclude_cols is None:
-            exclude_cols = [
-                'MA_SO_SV',
-                'HOC_KY',
-                'TC_HOANTHANH',
-                'semester_order',
-                'completion_rate',
-                'tc_failed',
-                'total_tc_completed',
-                'avg_completion_rate',
-                'completion_rate_trend'
-            ]
-        
-        feature_cols = [col for col in df.columns if col not in exclude_cols]
-        
-        categorical_cols = df[feature_cols].select_dtypes(include=['object']).columns.tolist()
-        
-        return feature_cols, categorical_cols
+        valid_prefixes = [
+            'Prev_', 'prev_', 'sem_', 'diem_', 'nam_', 'is_',
+            'load_', 'aggressive_', 'gpa_trend', 'total_', 'accumulated_',
+            'expected_', 'global_', 'high_', 'recent_', 'risk_', 'failed_'
+        ]
 
+        valid_exact = ['TC_DANGKY', 'NAM_TUYENSINH', 'DIEM_TRUNGTUYEN', 'DIEM_CHUAN', 'semester_number']
+        valid_exact.extend(self.feature_names)
+        # Các cột không được đưa vào feature list
+        final_cols = []
+        target_cols = ['TC_HOANTHANH', 'GPA', 'CPA', 'semester_order', 'MA_SO_SV', 'year', 'sem', 'HOC_KY']
+        for col in df.columns:
+            if col in target_cols:
+                continue
+            
+            is_valid = False
+            if col in valid_exact:
+                is_valid = True
+            else:
+                for prefix in valid_prefixes:
+                    if col.startswith(prefix):
+                        is_valid = True
+                        break
+            
+            if is_valid:
+                final_cols.append(col)
+        
+        return final_cols
 
 def prepare_features_for_modeling(train_df, valid_df, target_col='TC_HOANTHANH'):
     engineer = FeatureEngineer()
-    train_df = engineer.create_features(train_df, is_training=True)
-    valid_df = engineer.create_features(valid_df, is_training=False)
-    feature_cols, categorical_cols = engineer.get_feature_columns(train_df)
-    
-    X_train = train_df[feature_cols]
-    X_valid = valid_df[feature_cols]
-    y_train = train_df[target_col]
-    y_valid = valid_df[target_col]
-    
+
+    print("Creating train + valid features (time-aware)...")
+
+    # 1. GỘP để tạo lịch sử liên tục
+    full_df = pd.concat([train_df, valid_df], axis=0, ignore_index=True)
+
+    full_df = engineer.create_features(full_df)
+
+    # 2. TÁCH LẠI
+    train_end_order = get_semester_order('HK1 2023-2024')   # 20231
+    valid_order = get_semester_order('HK2 2023-2024')       # 20232
+    train_feat = full_df[full_df['semester_order'] <= train_end_order].copy()
+    valid_feat = full_df[full_df['semester_order'] == valid_order].copy()
+
+    # 4. Lấy danh sách feature
+    feature_cols = engineer.get_feature_columns(train_feat)
+
+    X_train = train_feat[feature_cols]
+    y_train = train_feat[target_col]
+
+    X_valid = valid_feat[feature_cols]
+    y_valid = valid_feat[target_col]
+
+    print(f"\nFeature validation:")
+    print(f"  Number of features   : {len(feature_cols)}")
+    categorical_cols = [c for c in feature_cols if c in engineer.feature_names]
+    print(f"  Categorical features : {categorical_cols}")
+    print(f"  Train size           : {X_train.shape}")
+    print(f"  Valid size           : {X_valid.shape}")
+
     return X_train, X_valid, y_train, y_valid, feature_cols, categorical_cols

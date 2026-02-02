@@ -49,6 +49,7 @@ data_loader: Module xử lý loading, cleaning, merging và splitting data (Xóa
     Temporal split (dựa vào thời gian)
     One-liner để gọi toàn bộ pipeline data loading
     Raw CSVs -> load_raw_data() -> clean_data() -> merge_data() -> split_data() -> train_df, valid_df, test_df
+    
 
 evaluation: đánh giá và visualize model performance
     đánh giá model với metrics và visualizations
@@ -67,8 +68,8 @@ features:
                                gpa_cpa_diff: GPA tăng/giảm so với CPA
                                gpa_cpa_ratio: tỷ lệ GPA / CPA
                                tc_dangky_high, tc_dangky_low: Binary flags cho số TC đăng ký cao/thấp (đăng kí nhiều: 0, ít: 1)
-                               completion_rate: Tỷ lệ hoàn thành (tchoanthanh / tcdangky)
-                               tc_failed: Số TC trượt (tcdangky - tc_hoanthanh)
+                        xóa    completion_rate: Tỷ lệ hoàn thành         (tchoanthanh / tcdangky);
+                        xóa    tc_failed: Số TC trượt (tcdangky - tc_hoanthanh);
     _create_temporal_features: 
                                semester_number: kì học hiện tại của sinh viên (kể từ khi nhập học);
                                hoc_ky_nam, hoc_ky_so: Parse năm và số học kỳ (HK1 2020-2021 -> 2020 1);

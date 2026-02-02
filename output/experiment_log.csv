@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 timestamp,experiment,R2,RMSE,MSE,MAE,MAPE,param_model_type,param_ensemble,param_optimize,param_n_trials,param_timeout,param_random_state,param_output_dir
 2026-01-29 16:57:27,xgboost_20260129_165727,0.9350738707551116,1.7889134425139703,3.2002113048071843,1.3577654516640254,11.074981652578495,xgboost,False,False,,,42,/Users/vietanh/Desktop/Learning-Progress-Prediction/output/evaluation/xgboost
 2026-01-29 20:50:30,xgboost_20260129_205030,0.934579529766102,1.795710831505349,3.2245773903856314,1.3381537242472266,10.939258376938517,xgboost,False,False,,,42,/Users/vietanh/Desktop/Learning-Progress-Prediction/output/evaluation/xgboost
@@ -12,3 +13,6 @@ timestamp,experiment,R2,RMSE,MSE,MAE,MAPE,param_model_type,param_ensemble,param_
 2026-01-29 22:23:23,xgboost_optimized_20260129_222323,0.9505833169062357,1.5606889927418288,2.4357501320655044,1.0548732171156894,9.60863054407861,xgboost,False,True,100.0,7200.0,42,/Users/vietanh/Desktop/Learning-Progress-Prediction/output/evaluation/xgboost_optimized
 2026-01-29 22:43:25,xgboost_optimized_20260129_224325,0.9517667293548584,1.541888347921669,2.3774196774566136,1.1203089751093736,10.771751571706336,xgboost,False,True,100.0,7200.0,42,/Users/vietanh/Desktop/Learning-Progress-Prediction/output/evaluation/xgboost_optimized
 2026-01-29 23:01:55,xgboost_optimized_20260129_230155,0.9533834970703692,1.5158262263568152,2.297729148511143,1.0643098951801573,9.86629417405212,xgboost,False,True,100.0,7200.0,42,/Users/vietanh/Desktop/Learning-Progress-Prediction/output/evaluation/xgboost_optimized
+=======
+timestamp,experiment,RMSE,param_model_type,param_ensemble,param_optimize,param_n_trials,param_timeout,param_random_state,param_output_dir
+>>>>>>> origin/hihi
