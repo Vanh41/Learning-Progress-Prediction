@@ -54,7 +54,8 @@ models/*.joblib
 models/*.pt
 models/*.pth
 nhap
-
+notebooks/experimental/catboost_info
+catboost_info
 # File kết quả output
 output/submission/*
 !output/submission/.gitkeep
