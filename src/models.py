@@ -19,28 +19,30 @@ class ModelTrainer:
         
         set_seed(RANDOM_STATE)
         
-    def _encode_categorical_features(self, X, categorical_cols, is_training=True):
+    def _encode_categorical_features(self, X, categorical_cols = None, is_training=True):
         X = X.copy()
+        object_cols = X.select_dtypes(include=['object']).columns.tolist()
+        if categorical_cols:
+            cols_to_encode = list(set(object_cols) | set(categorical_cols))
+        else:
+            cols_to_encode = object_cols
         
-        for col in categorical_cols:
-            if col in X.columns:
-                if is_training:
-                    self.label_encoders[col] = LabelEncoder()
-                    X[col] = self.label_encoders[col].fit_transform(X[col].astype(str))
+        for col in cols_to_encode:
+            if col not in X.columns:
+                continue
+            X[col] = X[col].astype(str).fillna('UNKNOWN')
+            if is_training:
+                le = LabelEncoder()
+                X[col] = le.fit_transform(X[col])
+                self.label_encoders[col] = le
+            else:
+                if col in self.label_encoders:
+                    le = self.label_encoders[col]
+                    X[col] = X[col].map(
+                        lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                    )
                 else:
-                    if col in self.label_encoders:
-                        known_categories = set(self.label_encoders[col].classes_)
-                        X[col] = X[col].astype(str).apply(
-                            lambda x: x if x in known_categories else 'Unknown'
-                        )
-                        if 'Unknown' not in known_categories:
-                            self.label_encoders[col].classes_ = np.append(
-                                self.label_encoders[col].classes_, 'Unknown'
-                            )
-                        X[col] = self.label_encoders[col].transform(X[col])
-                    else:
-                        X[col] = 0
-        
+                    X[col] = -1
         return X
     
     def train(self, X_train, y_train, X_valid=None, y_valid=None, categorical_cols=None):
@@ -79,14 +81,19 @@ class ModelTrainer:
                 self.model.fit(X_train_encoded, y_train)
                 
         elif self.model_type == 'catboost':
-            cat_features = [i for i, col in enumerate(X_train.columns) if col in categorical_cols]
+            cat_cols = X_train.select_dtypes(include=['object']).columns.tolist()
+            cat_features = [i for i, col in enumerate(X_train.columns) if col in cat_cols]
+            X_train_cb = X_train.copy()
+            X_valid_cb = X_valid.copy() if X_valid is not None else None
+            for col in cat_cols:
+                X_train_cb[col] = X_train_cb[col].astype(str).fillna('UNKNOWN')
+                if X_valid_cb is not None:
+                    X_valid_cb[col] = X_valid_cb[col].astype(str).fillna('UNKNOWN')
             self.model = cb.CatBoostRegressor(**self.params)
             if X_valid is not None:
-                self.model.fit(X_train_encoded, y_train, cat_features=cat_features, 
-                               eval_set=(X_valid_encoded, y_valid), 
-                               early_stopping_rounds=EARLY_STOPPING_ROUNDS, verbose=False)
+                self.model.fit(X_train_cb, y_train,cat_features=cat_features,eval_set=(X_valid_cb, y_valid),early_stopping_rounds=EARLY_STOPPING_ROUNDS,verbose=False)
             else:
-                self.model.fit(X_train_encoded, y_train, cat_features=cat_features, verbose=False)
+                self.model.fit(X_train_cb, y_train,cat_features=cat_features, verbose=False)
                 
         elif self.model_type == 'random_forest':
             self.model = RandomForestRegressor(**self.params)
@@ -115,6 +122,9 @@ class ModelTrainer:
         
         if self.model_type == 'catboost':
             X_encoded = X.copy()
+            cat_cols = X_encoded.select_dtypes(include=['object']).columns.tolist()
+            for col in cat_cols:
+                X_encoded[col] = X_encoded[col].astype(str).fillna('UNKNOWN')
         else:
             X_encoded = self._encode_categorical_features(X, categorical_cols, is_training=False)
         predictions = self.model.predict(X_encoded)

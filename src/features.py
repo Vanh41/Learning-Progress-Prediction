@@ -5,7 +5,7 @@ from .utils import calculate_semester_from_admission, parse_semester_code, fast_
 
 class FeatureEngineer:    
     def __init__(self):
-        self.feature_names = ['TOHOP_XT', 'PTXT', 'is_semester_2', 'is_overloaded', 'is_first_semester', 'failed_last_sem']
+        self.feature_names = ['TOHOP_XT', 'PTXT', 'MA_NGANH']
         
     def create_features(self, df, is_training=True):
         df = df.copy()
@@ -13,12 +13,17 @@ class FeatureEngineer:
             df['year'], df['sem'] = zip(*df['HOC_KY'].apply(parse_semester_code))
             df['semester_order'] = df['year'] * 10 + df['sem']
             df = df.sort_values(['MA_SO_SV', 'semester_order']).reset_index(drop=True)
-        grouped = df.groupby('MA_SO_SV')
-        df['Prev_GPA'] = grouped['GPA'].shift(1).fillna(-1)
-        df['Prev_CPA'] = grouped['CPA'].shift(1).fillna(-1)
-        df['Prev_TC_HOANTHANH'] = grouped['TC_HOANTHANH'].shift(1).fillna(0)
-        df['Prev_TC_DANGKY'] = grouped['TC_DANGKY'].shift(1).fillna(0)
+        for col in self.feature_names:
+            if col in df.columns:
+                df[col] = df[col].astype(str).astype('category')
+        
+        df['Prev_GPA'] = df.groupby('MA_SO_SV')['GPA'].shift(1).fillna(-1)
+        df['Prev_CPA'] = df.groupby('MA_SO_SV')['CPA'].shift(1).fillna(-1)
+        df['Prev_TC_HOANTHANH'] = df.groupby('MA_SO_SV')['TC_HOANTHANH'].shift(1).fillna(0)
+        df['Prev_TC_DANGKY'] = df.groupby('MA_SO_SV')['TC_DANGKY'].shift(1).fillna(0)
         df['is_first_semester'] = (df['Prev_TC_DANGKY'] == 0).astype(int)
+        df['Prev_GPA'] = df['Prev_GPA'].fillna(-1)
+        df['Prev_CPA'] = df['Prev_CPA'].fillna(-1)
         df = self._create_admission_features(df)
         df = self._create_history_features(df)
         df = self._create_temporal_features(df)
@@ -138,17 +143,31 @@ class FeatureEngineer:
         valid_prefixes = [
             'Prev_', 'prev_', 'sem_', 'diem_', 'nam_', 'is_',
             'load_', 'aggressive_', 'gpa_trend', 'total_', 'accumulated_',
-            'expected_', 'historical_', 'risk_', 'failed_', 'recent_', 'tc_dangky_'
+            'expected_', 'global_', 'high_', 'recent_', 'risk_', 'failed_'
         ]
 
-        valid_exact = ['TC_DANGKY', 'NAM_TUYENSINH', 'DIEM_TRUNGTUYEN', 'DIEM_CHUAN', 'semester_number', 'TOHOP_XT', 'PTXT']
-
+        valid_exact = ['TC_DANGKY', 'NAM_TUYENSINH', 'DIEM_TRUNGTUYEN', 'DIEM_CHUAN', 'semester_number']
+        valid_exact.extend(self.feature_names)
         # Các cột không được đưa vào feature list
-        exclude_cols = ['TC_HOANTHANH', 'GPA', 'CPA', 'semester_order', 'MA_SO_SV', 'year', 'sem', 'HOC_KY']
-
-        return [c for c in df.columns if c not in exclude_cols and 
-                (c in valid_exact or any(c.startswith(p) for p in valid_prefixes))]
-
+        final_cols = []
+        target_cols = ['TC_HOANTHANH', 'GPA', 'CPA', 'semester_order', 'MA_SO_SV', 'year', 'sem', 'HOC_KY']
+        for col in df.columns:
+            if col in target_cols:
+                continue
+            
+            is_valid = False
+            if col in valid_exact:
+                is_valid = True
+            else:
+                for prefix in valid_prefixes:
+                    if col.startswith(prefix):
+                        is_valid = True
+                        break
+            
+            if is_valid:
+                final_cols.append(col)
+        
+        return final_cols
 
 def prepare_features_for_modeling(train_df, valid_df, target_col='TC_HOANTHANH'):
     engineer = FeatureEngineer()

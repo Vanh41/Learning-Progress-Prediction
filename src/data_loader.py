@@ -31,78 +31,42 @@ class DataLoader:
     def clean_data(self):
         """Clean and preprocess raw data"""
         print("Cleaning data...")
-        self.admission_df = self._clean_admission_data(self.admission_df)
-        self.academic_df = self._clean_academic_data(self.academic_df)
+        self.admission_df['MA_SO_SV'] = self.admission_df['MA_SO_SV'].astype(str)
+        self.academic_df['MA_SO_SV'] = self.academic_df['MA_SO_SV'].astype(str)
+        df = pd.merge(self.academic_df, self.admission_df, on='MA_SO_SV', how='inner')
+        numeric_floats = ['GPA', 'CPA', 'DIEM_TRUNGTUYEN', 'DIEM_CHUAN']
+        for col in numeric_floats:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        numeric_ints = ['TC_DANGKY', 'TC_HOANTHANH']
+        for col in numeric_ints:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        df = df.sort_values(by=['MA_SO_SV', 'HOC_KY']).reset_index(drop=True)
+        # BƯỚC 2: KIỂM TRA LOGIC & LÀM SẠCH NHIỄU (Sanity Checks)
+        initial_rows = len(df)
+        df['TC_HOANTHANH'] = np.minimum(df['TC_HOANTHANH'], df['TC_DANGKY'])
+        df['GPA'] = df['GPA'].clip(lower=0.0, upper=4.0)
+        df['CPA'] = df['CPA'].clip(lower=0.0, upper=4.0)
+        rows_before_score_filter = len(df)
+        df = df[df['DIEM_TRUNGTUYEN'] >= df['DIEM_CHUAN']]
+        dropped_score_rows = rows_before_score_filter - len(df)
+        print(f" -> Đã loại bỏ {dropped_score_rows} dòng do Điểm trúng tuyển < Điểm chuẩn.")
+        rows_before_credit_filter = len(df)
+        df = df[df['TC_DANGKY'] > 0].copy()
+        dropped_credit_rows = rows_before_credit_filter - len(df)
+        print(f" -> Đã loại bỏ {dropped_credit_rows} dòng rác (TC_DANGKY=0).")
+        total_dropped = initial_rows - len(df)
+        print(f"--- HOÀN TẤT: Tổng cộng đã loại bỏ {total_dropped} dòng nhiễu. Kích thước data cuối: {df.shape} ---")
+        
+        self.merged_df = df
         return self
     
-    def _clean_admission_data(self, df):
-        """Clean admission data"""
-        df = df.copy()
-        
-        # Remove duplicates
-        df = df.drop_duplicates(subset=['MA_SO_SV'])
-        
-        # Fill missing categorical values
-        if 'PTXT' in df.columns:
-            df['PTXT'] = df['PTXT'].fillna('Unknown')
-    
-        if 'TOHOP_XT' in df.columns:
-            df['TOHOP_XT'] = df['TOHOP_XT'].fillna('Unknown')
-        
-        # Fill missing numeric values with median
-        for col in ['DIEM_TRUNGTUYEN', 'DIEM_CHUAN']:
-            if col in df.columns:
-                df[col] = df[col].fillna(df[col].median())
-                
-        return df
-    
-    def _clean_academic_data(self, df):
-        """Clean academic data"""
-        df = df.copy()
-        
-        # Remove duplicates
-        df = df.drop_duplicates(subset=['MA_SO_SV', 'HOC_KY'])
-        
-        # Fill missing GPA/CPA with 0
-        for col in ['GPA', 'CPA']:
-            if col in df.columns:
-                df[col] = df[col].fillna(0)
-        
-        # Fill missing TC values
-        for col in ['TC_DANGKY', 'TC_HOANTHANH']:
-            if col in df.columns:
-                df[col] = df[col].fillna(0)
-        
-        # Ensure TC_HOANTHANH <= TC_DANGKY (data validation)
-        if 'TC_HOANTHANH' in df.columns and 'TC_DANGKY' in df.columns:
-            df['TC_HOANTHANH'] = df[['TC_HOANTHANH', 'TC_DANGKY']].min(axis=1)
-        
-        # Ensure non-negative values
-        for col in ['GPA', 'CPA', 'TC_DANGKY', 'TC_HOANTHANH']:
-            if col in df.columns:
-                df[col] = df[col].clip(lower=0)
-        
-        return df
-    
     def merge_data(self):
-        """Merge academic records with admission data"""
-        print("Merging data...")
-        
-        merged_df = self.academic_df.merge(
-            self.admission_df,
-            on='MA_SO_SV',
-            how='left'
-        )
-        
-        print(f"Merged data shape: {merged_df.shape}")
-        
-        # Validate merge
-        if merged_df.isnull().any().any():
-            print("Warning: Found null values after merge")
-            null_counts = merged_df.isnull().sum()
-            print(null_counts[null_counts > 0])
-        
-        return merged_df
+        """Return merged and cleaned data"""
+        print(f"Merged data shape: {self.merged_df.shape}")
+        return self.merged_df
     
     def split_data(self, merged_df, train_end='HK1 2023-2024', valid_semester='HK2 2023-2024'):
         """Split data into train and validation sets based on semester"""

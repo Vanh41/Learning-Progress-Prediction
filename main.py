@@ -217,7 +217,6 @@ def main(args):
     
     return trainer, metrics
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Learning Progress Prediction Pipeline',

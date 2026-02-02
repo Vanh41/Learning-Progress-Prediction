@@ -1,7 +1,1 @@
 timestamp,experiment,RMSE,param_model_type,param_ensemble,param_optimize,param_n_trials,param_timeout,param_random_state,param_output_dir
-2026-02-01 22:06:06,lightgbm_20260201_220606,3.7925635385142873,lightgbm,False,False,,,42,E:\my_project\dataflow\Learning-Progress-Prediction\output\evaluation\lightgbm
-2026-02-01 22:06:48,catboost_20260201_220648,3.8049190939521353,catboost,False,False,,,42,E:\my_project\dataflow\Learning-Progress-Prediction\output\evaluation\catboost
-2026-02-01 22:07:30,random_forest_20260201_220730,3.8526396700386414,random_forest,False,False,,,42,E:\my_project\dataflow\Learning-Progress-Prediction\output\evaluation\random_forest
-2026-02-01 22:15:03,xgboost_optimized_20260201_221503,3.7776137270447134,xgboost,False,True,100.0,7200.0,42,E:\my_project\dataflow\Learning-Progress-Prediction\output\evaluation\xgboost_optimized
-2026-02-01 22:15:50,xgboost_20260201_221550,3.7980096374702175,xgboost,False,False,,,42,E:\my_project\dataflow\Learning-Progress-Prediction\output\evaluation\xgboost
-2026-02-01 22:16:20,xgboost_20260201_221620,3.7980096374702175,xgboost,False,False,,,42,E:\my_project\dataflow\Learning-Progress-Prediction\output\evaluation\xgboost

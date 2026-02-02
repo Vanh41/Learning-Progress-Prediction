@@ -18,7 +18,8 @@ train_raw['semester_order'] = train_raw.groupby('MA_SO_SV').cumcount()
 engineer = FeatureEngineer()
 # Giả sử chúng ta dùng chính train_raw để minh họa quy trình
 train_featured = engineer.create_features(train_raw)
-feature_cols, categorical_cols = engineer.get_feature_columns(train_featured)
+feature_cols = engineer.get_feature_columns(train_featured)
+categorical_cols = []
 
 # 3. HUẤN LUYỆN MÔ HÌNH (Dùng Ensemble để kiểm tra tổng thể)
 print("\n--- Đang huấn luyện mô hình Ensemble ---")
