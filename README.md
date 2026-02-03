@@ -1,118 +1,104 @@
-## 📂 Cấu trúc Dự án (Project Structure)
-
-Dự án được tổ chức theo cấu trúc tiêu chuẩn của Data Science để đảm bảo tính tái lập (reproducibility) và dễ dàng mở rộng.
-
-```text
-Learning-process-prediction/
-├── data/
-│   ├── raw/                   # 🔒 Dữ liệu thô (Immutable) - KHÔNG ĐƯỢC SỬA FILE Ở ĐÂY
-│   │   ├── admission.csv
-│   │   └── academic_records.csv
-│   ├── external/              # 🌍 Dữ liệu bên ngoài (Thời tiết, kinh tế, điểm chuẩn...)
-│   └── processed/             # ⚙️ Dữ liệu đã làm sạch & Feature Engineering (Dùng để train)
-│       ├── train.csv
-│       ├── val.csv
-│       └── test.csv
-│
-├── notebooks/                 # 📓 Jupyter Notebooks
-│   ├── experimental/          # Khu vực nháp (Sandbox) - Đặt tên: [TenTv]_[TenTask].ipynb
-│   └── final/                 # Notebook sạch để báo cáo/thuyết trình (Đã clear output)
-│       ├── 1_EDA_Story.ipynb         # Phân tích khám phá & Câu chuyện dữ liệu
-│       ├── 2_Modeling_Process.ipynb  # Quá trình huấn luyện & So sánh model
-│       └── 3_Policy_Analysis.ipynb   # Đề xuất giải pháp & Phân tích tác động
-│
-├── src/                       # 🧠 MÃ NGUỒN CHÍNH (Pipeline)
-│   ├── __init__.py
-│   ├── config.py              # Cấu hình toàn cục (Path, Random Seed, Constants)
-│   ├── data_loader.py         # Pipeline: Đọc CSV -> Clean -> Merge -> Split
-│   ├── features.py            # Feature Engineering: Tạo Lag, Trend, Ratio features
-│   ├── models.py              # Model Architecture: Định nghĩa XGBoost, LSTM, etc.
-│   ├── optimization.py        # Tuning: Chạy Optuna/GridSearch tối ưu tham số
-│   ├── evaluation.py          # Metrics: Tính RMSE, R2, SHAP, LIME
-│   └── utils.py               # Tiện ích: Logger, Save/Load Model, Helper functions
-│
-├── app/                       # 📊 Dashboard Application
-│   └── dashboard.py           # Mã nguồn ứng dụng Streamlit demo kết quả
-│
-├── models/                    # 💾 Nơi lưu trữ Model đã huấn luyện (.pkl, .json, .h5)
-├── output/                    # 📤 Kết quả đầu ra
-│   ├── submission.csv         # File nộp bài cuối cùng
-│   └── figures/               # Biểu đồ xuất ra từ code (để chèn vào báo cáo)
-│
-├── main.py                    # 🚀 ENTRY POINT: Script chạy toàn bộ quy trình từ A-Z
-├── requirements.txt           # Danh sách các thư viện cần thiết
-└── README.md                  # Tài liệu hướng dẫn sử dụng dự án
-```
-
-# 🛠 Hướng dẫn Cài đặt Môi trường (Setup Environment)
-
-Dự án sử dụng thư viện `virtualenv` để quản lý gói cài đặt. Vui lòng làm theo các bước sau trước khi code.
-
-### Bước 1: Cài đặt công cụ virtualenv
-Nếu máy bạn chưa có thư viện này, hãy cài đặt nó (chỉ cần làm 1 lần):
+# Learning Progress Prediction
+Dự án dự đoán số tín chỉ hoàn thành của sinh viên dựa trên dữ liệu học tập và tuyển sinh.
+## Run
+### 1. Cài đặt môi trường
 ```bash
-pip install virtualenv
-```
+# Tạo môi trường ảo
+python -m venv venv
 
-### Bước 2: Tạo môi trường ảo
-Tại thư mục gốc của dự án (`Learning-process-prediction/`), chạy lệnh:
-```bash
-# Tạo thư mục môi trường tên là 'venv'
-virtualenv venv
-```
-
-### Bước 3: Kích hoạt môi trường (Activate)
-*Mỗi lần bắt đầu làm việc, bạn phải chạy lệnh này.*
-
-*   **Đối với Windows (Command Prompt/PowerShell):**
-    ```bash
-    .\venv\Scripts\activate
-    ```
-    *(Nếu thấy dấu `(venv)` hiện ở đầu dòng lệnh là thành công)*
-
-*   **Đối với macOS / Linux:**
-    ```bash
-    source venv/bin/activate
-    ```
-
-### Bước 4: Cài đặt thư viện dự án
-Sau khi kích hoạt môi trường, hãy cài đặt các thư viện cần thiết từ file `requirements.txt`:
-```bash
+# Kích hoạt môi trường
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+# Cài đặt thư viện
 pip install -r requirements.txt
 ```
 
-### Bước 5: Thêm Kernel vào Jupyter Notebook (QUAN TRỌNG)
-Để chạy được Notebooks trong thư mục `notebooks/` với môi trường ảo vừa tạo:
-
-1.  Cài đặt ipykernel:
-    ```bash
-    pip install ipykernel
-    ```
-2.  Gắn môi trường vào Jupyter:
-    ```bash
-    python -m ipykernel install --user --name=venv_learning_prediction --display-name "Python (Learning Prediction)"
-    ```
-3.  Khi mở Jupyter Notebook, chọn Kernel: **Kernel** -> **Change kernel** -> **Python (Learning Prediction)**.
-
----
-### 🛑 Cách thoát môi trường
-Khi làm xong việc, chạy lệnh:
+### 2. Chạy huấn luyện model
 ```bash
-deactivate
+# Chạy với model mặc định (XGBoost)
+python main.py --save_model
+
+# Chạy với model cụ thể
+python main.py --model_type lightgbm --save_model
+python main.py --model_type catboost --save_model
+
+# Chạy với ensemble
+python main.py --ensemble --save_model
+
+# Tối ưu với Optuna
+python main.py --optimize --model_type xgboost --n_trials 100 --timeout 7200
+
+# Chạy dashboard
+streamlit run app/dashboard.py
 ```
 
----
+### 3. Chạy Dashboard
+```bash
+streamlit run app/dashboard.py
+```
 
-### 💡 Lưu ý cho Leader (Role A):
+## Mô tả các file chính
 
-1.  **File `.gitignore`**: Hãy chắc chắn file `.gitignore` của bạn đã có dòng `venv/` (như mình đã đưa ở câu trả lời trước) để không lỡ tay push cả thư viện lên Github.
-2.  **Cập nhật `requirements.txt`**: Vì team làm việc song song, thỉnh thoảng sẽ có người cài thêm thư viện mới (ví dụ `matplotlib`, `seaborn`). Hãy nhắc team chạy lệnh sau trước khi Push code để cập nhật danh sách thư viện cho người khác:
-    ```bash
-    pip freeze > requirements.txt
-<<<<<<< HEAD
-    ```
-=======
-    ```
+### Thư mục `src/`
 
+| File | Mô tả |
+|------|-------|
+| `config.py` | Cấu hình đường dẫn, tham số model, hằng số |
+| `data_loader.py` | Load và tiền xử lý dữ liệu từ CSV |
+| `features.py` | Tạo features: lag, trend, risk indicators |
+| `models.py` | Định nghĩa và huấn luyện models (XGBoost, LightGBM, CatBoost) |
+| `evaluation.py` | Tính metrics (RMSE, R², MAE) và vẽ biểu đồ |
+| `optimization.py` | Tối ưu hyperparameters với Optuna |
+| `utils.py` | Các hàm tiện ích: save/load model, logging |
 
->>>>>>> feature/overview
+### Các file khác
+
+| File | Mô tả |
+|------|-------|
+| `dashboard.py` | Dashboard Streamlit để visualize kết quả |
+| `comprehensive_analysis.ipynb` | Notebook phân tích và thử nghiệm |
+| `main.py` | Script chạy toàn bộ pipeline |
+| `requirements.txt` | Danh sách thư viện cần thiết |
+
+## Pipeline chính
+
+```
+Data Loading → Feature Engineering → Model Training → Evaluation → Prediction
+     ↓              ↓                      ↓              ↓            ↓
+data_loader.py → features.py → models.py/optimization.py → evaluation.py → submission.csv
+```
+
+## Features chính
+
+- **Lag features**: GPA, CPA, tín chỉ kỳ trước
+- **Trend features**: Độ dốc GPA, độ biến động
+- **Risk features**: Tỷ lệ fail tích lũy, recovery signals
+- **Admission features**: Điểm tuyển sinh, khoảng cách điểm chuẩn
+
+## Models
+
+- **XGBoost**: Model chính với categorical encoding
+- **LightGBM**: Model hỗ trợ
+- **CatBoost**: Model ensemble
+- Hỗ trợ ensemble weighted predictions
+
+## Metrics đánh giá
+
+- RMSE (Root Mean Squared Error)
+
+## Lưu ý
+
+- Dữ liệu được sắp xếp theo time-series (semester_order)
+- Categorical features (PTXT, TOHOP_XT) được encode tự động
+- Model hỗ trợ early stopping để tránh overfitting
+- Kết quả được clip trong khoảng [0, TC_DANGKY]
+
+## Tùy chỉnh
+
+Chỉnh sửa file `src/config.py` để thay đổi:
+- Tham số model (learning_rate, max_depth, ...)
+- Số trial cho Optuna
+- Đường dẫn dữ liệu
+- Random seed

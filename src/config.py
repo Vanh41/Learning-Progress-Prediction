@@ -45,7 +45,7 @@ DEFAULT_PARAMS = {
         'early_stopping_rounds': 100,
     
         # --- QUAN TRỌNG: PHẢI BẬT 2 DÒNG NÀY ---
-        'enable_categorical': True,  # Cho phép xử lý cột category (PTXT, TOHOP_XT...)
+        'enable_categorical': True,  
         'tree_method': 'hist',  
     },
     'lightgbm': {
@@ -61,7 +61,7 @@ DEFAULT_PARAMS = {
         'random_state': RANDOM_STATE,
         'n_jobs': -1,
         'verbose': -1,
-        'enable_categorical': True,  # Cho phép xử lý cột category (PTXT, TOHOP_XT...)
+        'enable_categorical': True,  
         'tree_method': 'hist' 
     },
     'catboost': {
@@ -72,7 +72,7 @@ DEFAULT_PARAMS = {
         'random_state': RANDOM_STATE,
         'verbose': False,
         'thread_count': -1,
-        'enable_categorical': True,  # Cho phép xử lý cột category (PTXT, TOHOP_XT...)
+        'enable_categorical': True,  
         'tree_method': 'hist'
     }
 }
@@ -88,4 +88,4 @@ FEATURE_GROUPS = {
 
 METRICS = ['RMSE']
 
-# EARLY_STOPPING_ROUNDS = 50
+EARLY_STOPPING_ROUNDS = 50

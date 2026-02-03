@@ -32,8 +32,8 @@ class ModelTrainer:
             },
             'lightgbm': {
                 'max_depth': 6,
-                'learning_rate': 0.05,
-                'n_estimators': 200,
+                'learning_rate': 0.02,
+                'n_estimators': 2000,
                 'num_leaves': 31,
                 'min_child_samples': 20,
                 'subsample': 0.8,
@@ -46,8 +46,8 @@ class ModelTrainer:
             },
             'catboost': {
                 'depth': 6,
-                'learning_rate': 0.05,
-                'iterations': 200,
+                'learning_rate': 0.02,
+                'iterations': 2000,
                 'l2_leaf_reg': 3.0,
                 'random_state': RANDOM_STATE,
                 'verbose': False,

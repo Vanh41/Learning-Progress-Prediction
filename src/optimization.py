@@ -17,47 +17,53 @@ class OptunaOptimizer:
                    valid_credits_dangky, categorical_cols):
         if self.model_type == 'xgboost':
             params = {
-                'n_estimators': 2000,
-                'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.05),
-                'max_depth': trial.suggest_int('max_depth', 3, 10),
-                'subsample': trial.suggest_float('subsample', 0.6, 1.0),
-                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
-                'reg_alpha': trial.suggest_float('reg_alpha', 0, 10),
-                'reg_lambda': trial.suggest_float('reg_lambda', 0, 10),
-                'min_child_weight': trial.suggest_int('min_child_weight', 1, 10),
-                
-                # Fixed params
-                'objective': 'reg:squarederror',
-                'n_jobs': -1,
-                'random_state': 42,
-                'enable_categorical': True,
-                'tree_method': 'hist',
+                "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.05),
+                "max_depth": trial.suggest_int("max_depth", 3, 10),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 10.0),
+                "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 10.0),
+                "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+                "n_estimators": 2000,
+                "objective": "reg:squarederror",
+                "n_jobs": -1,
+                "random_state": 42,
+                "enable_categorical": True,
+                "tree_method": "hist"
             }
             
         elif self.model_type == 'lightgbm':
             params = {
+                'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.05),
                 'max_depth': trial.suggest_int('max_depth', 3, 10),
-                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
-                'num_leaves': trial.suggest_int('num_leaves', 20, 150),
-                'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
                 'subsample': trial.suggest_float('subsample', 0.6, 1.0),
-                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
-                'reg_alpha': trial.suggest_float('reg_alpha', 0, 10),
-                'reg_lambda': trial.suggest_float('reg_lambda', 0, 10),
+                'feature_fraction': trial.suggest_float('feature_fraction', 0.6, 1.0),
+                'lambda_l1': trial.suggest_float('lambda_l1', 0, 10),
+                'lambda_l2': trial.suggest_float('lambda_l2', 0, 10),
+                'min_child_samples': trial.suggest_int('min_child_samples', 1, 10),
+                'n_estimators': 2000,
+                'objective': 'regression',
                 'random_state': 42,
-                'verbose': -1
+                'n_jobs': -1,
+                'verbosity': -1
             }
             
         elif self.model_type == 'catboost':
             params = {
-                'depth': trial.suggest_int('depth', 4, 10),
-                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
-                'iterations': trial.suggest_int('iterations', 100, 500),
+                'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.05),
+                'depth': trial.suggest_int('depth', 3, 10),
                 'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1, 10),
-                'border_count': trial.suggest_int('border_count', 32, 255),
-                'random_state': 42,
-                'verbose': False
+                'random_strength': trial.suggest_float('random_strength', 0.5, 5.0),
+                'min_data_in_leaf': trial.suggest_int('min_data_in_leaf', 1, 20),
+                'subsample': trial.suggest_float('subsample', 0.6, 1.0),
+                'rsm': trial.suggest_float('rsm', 0.6, 1.0),
+                'iterations': 2000,
+                'loss_function': 'RMSE',
+                'random_seed': 42,
+                'thread_count': -1,
+                'verbose': False,
+                'bootstrap_type': 'Bernoulli',
+                'cat_features': cat_features_idx if cat_features_idx else None
             }
         else:
             raise ValueError(f"Optimization not implemented for {self.model_type}")
