@@ -98,28 +98,24 @@ class ModelTrainer:
         if categorical_cols:
             print(f"  Categorical features: {categorical_cols}")
         if self.model_type == 'xgboost':
-            X_train_xgb = X_train.copy()
-            for col in categorical_cols:
-                if col in X_train_xgb.columns:
-                    X_train_xgb[col] = X_train_xgb[col].astype('category')
-            
-            X_valid_xgb = None
+            X_train_enc = self._encode_categorical_features(X_train, categorical_cols, is_training=True)
+
+            X_valid_enc = None
             if X_valid is not None:
-                X_valid_xgb = X_valid.copy()
-                for col in categorical_cols:
-                    if col in X_valid_xgb.columns:
-                        X_valid_xgb[col] = X_valid_xgb[col].astype('category')
-            
+                X_valid_enc = self._encode_categorical_features(
+                    X_valid, categorical_cols, is_training=False
+                )
+
             self.model = xgb.XGBRegressor(**self.params)
-            
+
             if X_valid is not None and y_valid is not None:
                 self.model.fit(
-                    X_train_xgb, y_train,
-                    eval_set=[(X_train_xgb, y_train), (X_valid_xgb, y_valid)],
+                    X_train_enc, y_train,
+                    eval_set=[(X_valid_enc, y_valid)],
                     verbose=200
                 )
             else:
-                self.model.fit(X_train_xgb, y_train)
+                self.model.fit(X_train_enc, y_train)
         
         # LightGBM - Tự động nhận diện category dtype
         elif self.model_type == 'lightgbm':
@@ -175,15 +171,6 @@ class ModelTrainer:
                     verbose=False
                 )
         
-        # Random Forest - Cần encode
-        elif self.model_type == 'random_forest':
-            X_train_encoded = self._encode_categorical_features(
-                X_train, categorical_cols, is_training=True
-            )
-            
-            self.model = RandomForestRegressor(**self.params)
-            self.model.fit(X_train_encoded, y_train)
-        
         else:
             raise ValueError(f"Unknown model type: {self.model_type}")
         
@@ -199,10 +186,7 @@ class ModelTrainer:
         
         # XGBoost
         if self.model_type == 'xgboost':
-            X_pred = X.copy()
-            for col in categorical_cols:
-                if col in X_pred.columns:
-                    X_pred[col] = X_pred[col].astype('category')
+            X_pred = self._encode_categorical_features(X, categorical_cols, is_training=False)
             predictions = self.model.predict(X_pred)
         
         # CatBoost

@@ -33,58 +33,47 @@ def main(args):
     model_output_dir = get_model_output_dir(model_name)
     print(f"\nModel output directory: {model_output_dir}")
     
-    # STEP 1: Load and prepare data
+    # STEP 1 & 2: Load processed data
     print("\n" + "="*80)
-    print("[STEP 1] Loading and preparing data...")
+    print("[STEP 1 & 2] Loading processed data...")
     print("="*80)
     
-    # Load data với new pipeline
-    train_df, valid_df, test_df = load_and_prepare_data(
-        admission_path='data/raw/admission.csv',
-        academic_path='data/raw/academic_records.csv',
-        test_path='data/raw/test.csv',
-        split_sem=20231, 
-        valid_sem=20232   
-    )
+    # Load trực tiếp dữ liệu đã xử lý
+    train_feat = pd.read_csv('./data/processed/train_final.csv')
+    test_feat = pd.read_csv('./data/processedtest_final.csv')
     
-    print(f"\nData loaded successfully:")
-    print(f"  Train: {train_df.shape}")
-    print(f"  Valid: {valid_df.shape}")
-    if test_df is not None:
-        print(f"  Test:  {test_df.shape}")
-    
-    # STEP 2: Feature engineering
-    print("\n" + "="*80)
-    print("[STEP 2] Creating features...")
-    print("="*80)
-    
-    # Sử dụng new feature engineering pipeline
-    result = prepare_features_for_modeling(
-        train_df=train_df,
-        valid_df=valid_df,
-        test_df=test_df,
-        target_col='COMPLETION_RATE'  # Train trên Rate thay vì Credits
-    )
+    # Giả sử bạn dùng 1 phần train làm validation hoặc đã có valid_final.csv
+    # Ở đây tôi ví dụ tách validation từ train nếu bạn chưa có file valid riêng
+    from sklearn.model_selection import train_test_split
+    train_feat, valid_feat = train_test_split(train_feat, test_size=0.2, random_state=RANDOM_STATE)
 
-    test_df.to_csv('af.csv')
+    # Khởi tạo Engineer để lấy danh sách cột hợp lệ
+    engineer = FeatureEngineer()
+    feature_cols = engineer.get_feature_columns(train_feat)
+    categorical_cols = [c for c in feature_cols if c in engineer.cat_cols]
     
-    X_train = result['X_train']
-    X_valid = result['X_valid']
-    y_train = result['y_train']
-    y_valid = result['y_valid']
-    feature_cols = result['feature_cols']
-    categorical_cols = result['categorical_cols']
-    
-    # Lưu valid và test dataframes để dùng sau
-    valid_full_df = valid_df.copy()
-    test_full_df = result.get('test_df', None)
-    X_test = result.get('X_test', None)
-    
-    print(f"\nFeature engineering completed:")
-    print(f"  Training set: {X_train.shape}")
-    print(f"  Validation set: {X_valid.shape}")
-    print(f"  Number of features: {len(feature_cols)}")
-    print(f"  Categorical features ({len(categorical_cols)}): {categorical_cols}")
+    target_col = 'COMPLETION_RATE' # Hoặc 'TC_HOANTHANH' tùy mục tiêu của bạn
+
+    # Prepare X, y
+    X_train = train_feat[feature_cols].copy()
+    y_train = train_feat[target_col]
+
+    X_valid = valid_feat[feature_cols].copy()
+    y_valid = valid_feat[target_col]
+
+    X_test = test_feat[feature_cols].copy()
+
+    # Encode categorical columns nếu cần
+    from sklearn.preprocessing import OrdinalEncoder
+    encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
+    if categorical_cols:
+        X_train[categorical_cols] = encoder.fit_transform(X_train[categorical_cols].astype(str))
+        X_valid[categorical_cols] = encoder.transform(X_valid[categorical_cols].astype(str))
+        X_test[categorical_cols] = encoder.transform(X_test[categorical_cols].astype(str))
+
+    # Gán lại các biến cần thiết cho các bước sau
+    valid_full_df = valid_feat
+    test_full_df = test_feat
     
     # STEP 3: Model training
     print("\n" + "="*80)

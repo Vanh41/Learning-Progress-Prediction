@@ -8,7 +8,6 @@ python main.py --team_name Multour
 # Chạy với model cụ thể
 python main.py --model_type lightgbm --save_model
 python main.py --model_type catboost --save_model
-python main.py --model_type random_forest --save_model
 
 # Chạy với ensemble
 python main.py --ensemble --save_model

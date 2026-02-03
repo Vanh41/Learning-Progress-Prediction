@@ -59,16 +59,6 @@ class OptunaOptimizer:
                 'random_state': 42,
                 'verbose': False
             }
-            
-        elif self.model_type == 'random_forest':
-            params = {
-                'max_depth': trial.suggest_int('max_depth', 3, 20),
-                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
-                'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
-                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
-                'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2']),
-                'random_state': 42
-            }
         else:
             raise ValueError(f"Optimization not implemented for {self.model_type}")
         
