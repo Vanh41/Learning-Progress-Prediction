@@ -5,7 +5,7 @@ import pandas as pd
 import joblib
 from pathlib import Path
 from datetime import datetime
-
+import re
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -14,33 +14,36 @@ def set_seed(seed=42):
     
 
 def save_model(model, filename, directory='models'):
-    from .config import MODELS_DIR
+    from pathlib import Path
+    models_dir = Path('models')
+    models_dir.mkdir(exist_ok=True)
     
-    filepath = MODELS_DIR / filename
+    filepath = models_dir / filename
     joblib.dump(model, filepath)
     print(f"Model saved to: {filepath}")
     return str(filepath)
 
 
 def load_model(filename, directory='models'):
-    from .config import MODELS_DIR
-    
-    filepath = MODELS_DIR / filename
+    from pathlib import Path
+    filepath = Path('models') / filename
     model = joblib.load(filepath)
     print(f"Model loaded from: {filepath}")
     return model
 
 
 def save_submission(predictions, student_ids, team_name, directory='output'):
-    from .config import OUTPUT_DIR
+    from pathlib import Path
+    output_dir = Path('output')
+    output_dir.mkdir(exist_ok=True)
     
     submission = pd.DataFrame({
         'MA_SO_SV': student_ids,
-        'PRED_TC_HOANTHANH': predictions.astype(int)
+        'PRED_TC_HOANTHANH': predictions
     })
     
     filename = f"{team_name}_submission.csv"
-    filepath = OUTPUT_DIR / filename
+    filepath = output_dir / filename
     submission.to_csv(filepath, index=False)
     print(f"Submission saved to: {filepath}")
     return str(filepath)
@@ -51,8 +54,25 @@ def create_semester_code(year, semester):
     return f"HK{semester} {year}-{next_year}"
 
 
-def parse_semester_code(semester_code):
+def parse_semester_string(sem_str):
     """Tách học kỳ và năm học từ chuỗi (VD: 'HK1 2023-2024')"""
+    s = str(sem_str).strip()
+    if s.isdigit():
+        return int(s)
+    digits=re.findall(r'\d+',s)
+    if len(digits) >= 2:
+        # Giả sử số nhỏ là kỳ, số lớn (4 chữ số) là năm
+        # Tìm năm (thường là số có 4 chữ số đầu tiên tìm thấy)
+        years = [int(d) for d in digits if len(d) == 4]
+        sems = [int(d) for d in digits if len(d) == 1]
+        
+        if years and sems:
+            year = years[0]
+            sem = sems[0]
+            return year * 10 + sem
+    return 0
+
+def parse_semester_code(semester_code):
     if pd.isna(semester_code):
         return 0, 0
     try:
@@ -64,10 +84,8 @@ def parse_semester_code(semester_code):
     except:
         return 0, 0
 
-
 def get_semester_order(semester_code):
-    year, semester = parse_semester_code(semester_code)
-    return year * 10 + semester
+    return parse_semester_string(semester_code)
 
 
 def calculate_semester_from_admission(admission_year, semester_code):
@@ -81,20 +99,27 @@ def calculate_semester_from_admission(admission_year, semester_code):
     return max(1, semester_num)
 
 def fast_slope(y):
-    if len(y)<2:
+    y_clean = y[~np.isnan(y)]
+    n = len(y_clean)
+    if n < 2:
         return 0.0
-    x = np.arange(len(y))
-    x_mean, y_mean = np.mean(x), np.mean(y)
-    numerator = np.sum((x - x_mean) * (y - y_mean))
+    
+    x = np.arange(n)
+    x_mean = np.mean(x)
+    y_mean = np.mean(y_clean)
+    
+    numerator = np.sum((x - x_mean) * (y_clean - y_mean))
     denominator = np.sum((x - x_mean) ** 2)
+    
     return numerator / (denominator + 1e-6)
 
-def log_experiment(experiment_name, metrics, params, directory='output'):
-    from .config import OUTPUT_DIR
-    import pandas as pd
-    from datetime import datetime
-
-    log_file = OUTPUT_DIR / 'experiment_log.csv'
+def log_experiment(experiment_name, metrics, params):
+    """Log experiment results"""
+    from pathlib import Path
+    output_dir = Path('output')
+    output_dir.mkdir(exist_ok=True)
+    
+    log_file = output_dir / 'experiment_log.csv'
 
     log_entry = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),

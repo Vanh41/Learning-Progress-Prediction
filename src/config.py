@@ -67,15 +67,6 @@ DEFAULT_PARAMS = {
         'random_state': RANDOM_STATE,
         'verbose': False,
         'thread_count': -1
-    },
-    'random_forest': {
-        'max_depth': 10,            
-        'n_estimators': 200,
-        'min_samples_split': 10,   
-        'min_samples_leaf': 5,      
-        'max_features': 'sqrt',
-        'random_state': RANDOM_STATE,
-        'n_jobs': -1
     }
 }
 
