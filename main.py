@@ -65,6 +65,8 @@ def main(args):
         test_df=test_df,
         target_col='COMPLETION_RATE'  # Train trên Rate thay vì Credits
     )
+
+    test_df.to_csv('af.csv')
     
     X_train = result['X_train']
     X_valid = result['X_valid']
@@ -323,7 +325,7 @@ Examples:
     
     # Model arguments
     parser.add_argument('--model_type', type=str, default='xgboost',
-                       choices=['xgboost', 'lightgbm', 'catboost', 'random_forest'],
+                       choices=['xgboost', 'lightgbm', 'catboost'],
                        help='Type of model to train')
     parser.add_argument('--ensemble', action='store_true',
                        help='Use ensemble of models')

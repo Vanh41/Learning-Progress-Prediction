@@ -34,21 +34,24 @@ N_SPLITS = 5
 
 DEFAULT_PARAMS = {
     'xgboost': {
+        'n_estimators': 2000,
+        'learning_rate': 0.02,
         'max_depth': 6,
-        'learning_rate': 0.05,
-        'n_estimators': 200,
-        'min_child_weight': 3,
         'subsample': 0.8,
         'colsample_bytree': 0.8,
-        'gamma': 0.1,
-        'reg_lambda': 0.1,
-        'random_state': RANDOM_STATE,
-        'n_jobs': -1
+        'objective': 'reg:squarederror',
+        'n_jobs': -1,
+        'random_state': 42,
+        'early_stopping_rounds': 100,
+    
+        # --- QUAN TRỌNG: PHẢI BẬT 2 DÒNG NÀY ---
+        'enable_categorical': True,  # Cho phép xử lý cột category (PTXT, TOHOP_XT...)
+        'tree_method': 'hist',  
     },
     'lightgbm': {
         'max_depth': 6,
-        'learning_rate': 0.05,
-        'n_estimators': 200,
+        'learning_rate': 0.02,
+        'n_estimators': 2000,
         'num_leaves': 31,
         'min_child_samples': 20,
         'subsample': 0.8,
@@ -57,16 +60,20 @@ DEFAULT_PARAMS = {
         'reg_lambda': 1.0,
         'random_state': RANDOM_STATE,
         'n_jobs': -1,
-        'verbose': -1
+        'verbose': -1,
+        'enable_categorical': True,  # Cho phép xử lý cột category (PTXT, TOHOP_XT...)
+        'tree_method': 'hist' 
     },
     'catboost': {
         'depth': 6,
-        'learning_rate': 0.05,
-        'iterations': 200,
+        'learning_rate': 0.02,
+        'iterations': 2000,
         'l2_leaf_reg': 3.0,
         'random_state': RANDOM_STATE,
         'verbose': False,
-        'thread_count': -1
+        'thread_count': -1,
+        'enable_categorical': True,  # Cho phép xử lý cột category (PTXT, TOHOP_XT...)
+        'tree_method': 'hist'
     }
 }
 
@@ -81,4 +88,4 @@ FEATURE_GROUPS = {
 
 METRICS = ['RMSE']
 
-EARLY_STOPPING_ROUNDS = 50
+# EARLY_STOPPING_ROUNDS = 50
