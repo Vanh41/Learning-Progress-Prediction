@@ -66,7 +66,6 @@ streamlit run app/dashboard.py
 DATAFLOW_TEAM_NAME/
 ├── data/
 │   ├── raw/                   # Chứa file gốc: admission.csv, academic_records.csv
-│   ├── external/              # Dữ liệu ngoài 
 │   └── processed/             # Dữ liệu đã sạch (để train model)
 │
 ├── notebooks/                 # Nơi chạy thử nghiệm (Jupyter Notebooks)
@@ -88,7 +87,8 @@ DATAFLOW_TEAM_NAME/
 │
 ├── models/                    # Nơi lưu file model đã train (.pkl, .json)
 ├── output/                    # Kết quả output (submission.csv, charts)
-├── main.py                    # FILE CHẠY CHÍNH (Pipeline từ A->Z)
+├── main.py                    # FILE CHẠY CHÍNH (Pipeline)
+├── main_from_processed.py     # FILE CHẠY TEST
 ├── requirements.txt           # Danh sách thư viện cần cài
 └── README.md                  # Hướng dẫn chạy code
 ```
