@@ -1,6 +1,12 @@
-# Learning Progress Prediction
+# MulTour - Learning Progress Prediction
 Dự án dự đoán số tín chỉ hoàn thành của sinh viên dựa trên dữ liệu học tập và tuyển sinh.
 ## Run
+
+
+Sau khi clone repository, bạn có thể cài đặt các dependencies cục bộ trên Python>=3.11 như sau:
+
+
+
 ### 1. Cài đặt môi trường
 ```bash
 # Tạo môi trường ảo
@@ -73,13 +79,6 @@ streamlit run app/dashboard.py
 | `main.py` | Script chạy toàn bộ pipeline |
 | `requirements.txt` | Danh sách thư viện cần thiết |
 
-## Pipeline chính
-
-```
-Data Loading → Feature Engineering → Model Training → Evaluation → Prediction
-     ↓              ↓                      ↓              ↓            ↓
-data_loader.py → features.py → models.py/optimization.py → evaluation.py → submission.csv
-```
 
 ## Features chính
 
