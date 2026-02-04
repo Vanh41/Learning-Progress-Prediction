@@ -66,11 +66,11 @@ streamlit run app/dashboard.py
 DATAFLOW_TEAM_NAME/
 ├── data/
 │   ├── raw/                   # Chứa file gốc: admission.csv, academic_records.csv
-│   ├── external/              # Dữ liệu ngoài (thời tiết, điểm chuẩn...)
+│   ├── external/              # Dữ liệu ngoài 
 │   └── processed/             # Dữ liệu đã sạch (để train model)
 │
 ├── notebooks/                 # Nơi chạy thử nghiệm (Jupyter Notebooks)
-│   ├── experimental/          # Nháp (Đặt tên: A_test.ipynb, C_feature_test.ipynb...)
+│   ├── experimental/          # Nháp 
 │   └── final/                 # Notebook sạch sẽ dùng để nộp/thuyết trình
 
 ├── src/                       # MÃ NGUỒN CHÍNH (Các hàm tái sử dụng)
