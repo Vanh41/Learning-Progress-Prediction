@@ -41,26 +41,38 @@ streamlit run app/dashboard.py
 
 ## Mô tả các file chính
 
-### Thư mục `src/`
+DATAFLOW_TEAM_NAME/
+├── data/
+│   ├── raw/                   # Chứa file gốc: admission.csv, academic_records.csv
+│   ├── external/              # Dữ liệu ngoài (thời tiết, điểm chuẩn...)
+│   └── processed/             # Dữ liệu đã sạch (để train model)
+│
+├── notebooks/                 # Nơi chạy thử nghiệm (Jupyter Notebooks)
+│   ├── experimental/          # Nháp (Đặt tên: A_test.ipynb, C_feature_test.ipynb...)
+│   └── final/                 # Notebook sạch sẽ dùng để nộp/thuyết trình
+│       ├── 1_EDA_Story.ipynb
+│       ├── 2_Modeling_Process.ipynb
+│       └── 3_Policy_Analysis.ipynb
+│
+├── src/                       # MÃ NGUỒN CHÍNH (Các hàm tái sử dụng)
+│   ├── __init__.py
+│   ├── config.py              # Cấu hình đường dẫn, tham số global
+│   ├── data_loader.py         # Hàm đọc, làm sạch và merge dữ liệu
+│   ├── features.py            # Hàm tạo biến đặc trưng (Feature Engineering)
+│   ├── models.py              # Hàm định nghĩa model, train và predict
+│   ├── optimization.py        # Hàm chạy Optuna/GridSearch tối ưu tham số
+│   ├── evaluation.py          # Hàm tính metric (RMSE, R2) và vẽ biểu đồ lỗi
+│   └── utils.py               # Các hàm phụ trợ (Lưu file, set seed...)
+│
+├── app/                       # Dashboard (Streamlit)
+│   └── dashboard.py           # Code chạy Web App báo cáo
+│
+├── models/                    # Nơi lưu file model đã train (.pkl, .json)
+├── output/                    # Kết quả output (submission.csv, charts)
+├── main.py                    # FILE CHẠY CHÍNH (Pipeline từ A->Z)
+├── requirements.txt           # Danh sách thư viện cần cài
+└── README.md                  # Hướng dẫn chạy code
 
-| File | Mô tả |
-|------|-------|
-| `config.py` | Cấu hình đường dẫn, tham số model, hằng số |
-| `data_loader.py` | Load và tiền xử lý dữ liệu từ CSV |
-| `features.py` | Tạo features: lag, trend, risk indicators |
-| `models.py` | Định nghĩa và huấn luyện models (XGBoost, LightGBM, CatBoost) |
-| `evaluation.py` | Tính metrics (RMSE, R², MAE) và vẽ biểu đồ |
-| `optimization.py` | Tối ưu hyperparameters với Optuna |
-| `utils.py` | Các hàm tiện ích: save/load model, logging |
-
-### Các file khác
-
-| File | Mô tả |
-|------|-------|
-| `dashboard.py` | Dashboard Streamlit để visualize kết quả |
-| `comprehensive_analysis.ipynb` | Notebook phân tích và thử nghiệm |
-| `main.py` | Script chạy toàn bộ pipeline |
-| `requirements.txt` | Danh sách thư viện cần thiết |
 
 ## Pipeline chính
 
