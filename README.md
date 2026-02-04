@@ -83,12 +83,12 @@ DATAFLOW_TEAM_NAME/
 │   └── utils.py               # Các hàm phụ trợ (Lưu file, set seed...)
 │
 ├── app/                       # Dashboard (Streamlit)
-│   └── dashboard.py           # Code chạy Web App báo cáo
+│   └── dashboard.py           
 │
 ├── models/                    # Nơi lưu file model đã train (.pkl, .json)
 ├── output/                    # Kết quả output (submission.csv, charts)
 ├── main.py                    # FILE CHẠY CHÍNH (Pipeline)
-├── main_from_processed.py     # FILE CHẠY TEST
+├── main_from_processed.py     # file mục đích để test pipeline có chạy ổn không
 ├── requirements.txt           # Danh sách thư viện cần cài
 └── README.md                  # Hướng dẫn chạy code
 ```
