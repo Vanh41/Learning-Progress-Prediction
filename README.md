@@ -15,7 +15,17 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Chạy huấn luyện model
+
+
+###  2. Thư mục `notebooks/final` quá trình phân tính và khai phá dữ liệu 
+
+| File | Mô tả |
+|------|-------|
+| `DataCleaning.ipynb` | Pipeline tiền xử lý dữ liệu từ raw dataa |
+| `Dataflow2026EDA.ipynb` | Pipeline EDA |
+| `FeatureEngineering.ipynb` | Pipeline cho phần FeatureEngineering |
+
+### 3. Chạy huấn luyện model
 ```bash
 # Chạy với model mặc định (XGBoost)
 python main.py --save_model
@@ -34,19 +44,10 @@ python main.py --optimize --model_type xgboost --n_trials 100 --timeout 7200
 streamlit run app/dashboard.py
 ```
 
-### 3. Chạy Dashboard
+### 4. Chạy Dashboard
 ```bash
 streamlit run app/dashboard.py
 ```
-
-
-### Thư mục `notebooks/final` quá trình phân tính và khai phá dữ liệu 
-
-| File | Mô tả |
-|------|-------|
-| `DataCleaning.ipynb` | Pipeline tiền xử lý dữ liệu từ raw dataa |
-| `Dataflow2026EDA.ipynb` | Pipeline EDA |
-| `FeatureEngineering.ipynb` | Pipeline cho phần FeatureEngineering |
 
 
 ## Mô tả các file chính
