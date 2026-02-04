@@ -65,8 +65,6 @@ def main(args):
         test_df=test_df,
         target_col='COMPLETION_RATE'  # Train trên Rate thay vì Credits
     )
-
-    test_df.to_csv('af.csv')
     
     X_train = result['X_train']
     X_valid = result['X_valid']
