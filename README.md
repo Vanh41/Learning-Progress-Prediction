@@ -40,7 +40,7 @@ streamlit run app/dashboard.py
 ```
 
 ## Mô tả các file chính
-
+```
 DATAFLOW_TEAM_NAME/
 ├── data/
 │   ├── raw/                   # Chứa file gốc: admission.csv, academic_records.csv
@@ -72,7 +72,7 @@ DATAFLOW_TEAM_NAME/
 ├── main.py                    # FILE CHẠY CHÍNH (Pipeline từ A->Z)
 ├── requirements.txt           # Danh sách thư viện cần cài
 └── README.md                  # Hướng dẫn chạy code
-
+```
 
 ## Pipeline chính
 
