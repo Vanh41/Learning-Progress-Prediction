@@ -23,13 +23,18 @@ pip install -r requirements.txt
 
 
 
-###  2. Thư mục `notebooks/final` quá trình phân tính và khai phá dữ liệu 
+###  2. Thư mục `notebooks/final` quá trình phân tính và khai phá dữ liệu, kết quả chạy của các model.
 
 | File | Mô tả |
 |------|-------|
 | `DataCleaning.ipynb` | Pipeline tiền xử lý dữ liệu từ raw data |
 | `Dataflow2026EDA.ipynb` | Pipeline EDA |
 | `FeatureEngineering.ipynb` | Pipeline cho phần FeatureEngineering |
+| `final_lightgbm.ipynb` | Pipeline training cho model LightGBM |
+| `final_xgboost.ipynb` | Pipeline training cho model XGBoost |
+| `final_catboost.ipynb` | Pipeline training cho model CatBoost |
+
+
 
 ### 3. Chạy huấn luyện model
 ```bash
