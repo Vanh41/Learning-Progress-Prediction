@@ -88,7 +88,7 @@ st.sidebar.markdown("### ⚙️ Cài đặt Dashboard")
 
 view_option = st.sidebar.selectbox(
     "Chọn chế độ xem",
-    ["📈 Tổng quan", "👤 Phân tích sinh viên", "🎯 Hiệu suất model", "⚠️ Đánh giá rủi ro"],
+    ["📈 Tổng quan", "👤 Phân tích sinh viên", "⚠️ Đánh giá rủi ro"],
     index=0
 )
 
@@ -98,7 +98,6 @@ with st.sidebar.expander("Xem hướng dẫn"):
     st.markdown("""
     - **Tổng quan**: Xem thống kê tổng thể
     - **Phân tích sinh viên**: Tra cứu thông tin sinh viên
-    - **Hiệu suất model**: Upload predictions để đánh giá
     - **Đánh giá rủi ro**: Phát hiện sinh viên có nguy cơ
     """)
 
@@ -341,124 +340,124 @@ elif view_option == "👤 Phân tích sinh viên":
 
 
 # ========== HIỆU SUẤT MODEL ==========
-elif view_option == "🎯 Hiệu suất model":
-    st.header("🎯 Đánh giá Hiệu suất Model")
+# elif view_option == "🎯 Hiệu suất model":
+#     st.header("🎯 Đánh giá Hiệu suất Model")
     
-    st.info("📤 Upload file predictions để xem kết quả đánh giá model")
+#     st.info("📤 Upload file predictions để xem kết quả đánh giá model")
     
-    uploaded_file = st.file_uploader(
-        "Chọn file CSV chứa predictions",
-        type=['csv'],
-        help="File phải có 2 cột: MA_SO_SV và PRED_TC_HOANTHANH"
-    )
+#     uploaded_file = st.file_uploader(
+#         "Chọn file CSV chứa predictions",
+#         type=['csv'],
+#         help="File phải có 2 cột: MA_SO_SV và PRED_TC_HOANTHANH"
+#     )
     
-    if uploaded_file is not None:
-        try:
-            predictions_df = pd.read_csv(uploaded_file)
+#     if uploaded_file is not None:
+#         try:
+#             predictions_df = pd.read_csv(uploaded_file)
             
-            # Validate columns
-            required_cols = ['MA_SO_SV', 'PRED_TC_HOANTHANH']
-            if not all(col in predictions_df.columns for col in required_cols):
-                st.error(f"❌ File phải chứa các cột: {', '.join(required_cols)}")
-            else:
-                # Merge với actual values
-                eval_df = df[['MA_SO_SV', 'TC_HOANTHANH', 'TC_DANGKY']].merge(
-                    predictions_df,
-                    on='MA_SO_SV',
-                    how='inner'
-                )
+#             # Validate columns
+#             required_cols = ['MA_SO_SV', 'PRED_TC_HOANTHANH']
+#             if not all(col in predictions_df.columns for col in required_cols):
+#                 st.error(f"❌ File phải chứa các cột: {', '.join(required_cols)}")
+#             else:
+#                 # Merge với actual values
+#                 eval_df = df[['MA_SO_SV', 'TC_HOANTHANH', 'TC_DANGKY']].merge(
+#                     predictions_df,
+#                     on='MA_SO_SV',
+#                     how='inner'
+#                 )
                 
-                if len(eval_df) == 0:
-                    st.warning("⚠️ Không có MA_SO_SV nào khớp giữa predictions và dữ liệu thực tế")
-                else:
-                    y_true = eval_df['TC_HOANTHANH'].values
-                    y_pred = eval_df['PRED_TC_HOANTHANH'].values
+#                 if len(eval_df) == 0:
+#                     st.warning("⚠️ Không có MA_SO_SV nào khớp giữa predictions và dữ liệu thực tế")
+#                 else:
+#                     y_true = eval_df['TC_HOANTHANH'].values
+#                     y_pred = eval_df['PRED_TC_HOANTHANH'].values
                     
-                    # Tính metrics
-                    metrics = calculate_metrics(y_true, y_pred)
+#                     # Tính metrics
+#                     metrics = calculate_metrics(y_true, y_pred)
                     
-                    # Hiển thị metrics
-                    st.subheader("📊 Kết quả Đánh giá")
-                    col1, col2, col3 = st.columns(3)
+#                     # Hiển thị metrics
+#                     st.subheader("📊 Kết quả Đánh giá")
+#                     col1, col2, col3 = st.columns(3)
                     
-                    with col1:
-                        st.metric("RMSE", f"{metrics['RMSE']:.4f}")
+#                     with col1:
+#                         st.metric("RMSE", f"{metrics['RMSE']:.4f}")
                     
-                    with col2:
-                        mae = np.mean(np.abs(y_true - y_pred))
-                        st.metric("MAE", f"{mae:.4f}")
+#                     with col2:
+#                         mae = np.mean(np.abs(y_true - y_pred))
+#                         st.metric("MAE", f"{mae:.4f}")
                     
-                    with col3:
-                        r2 = 1 - (np.sum((y_true - y_pred)**2) / np.sum((y_true - np.mean(y_true))**2))
-                        st.metric("R² Score", f"{r2:.4f}")
+#                     with col3:
+#                         r2 = 1 - (np.sum((y_true - y_pred)**2) / np.sum((y_true - np.mean(y_true))**2))
+#                         st.metric("R² Score", f"{r2:.4f}")
                     
-                    # Scatter plot
-                    st.subheader("📈 Predictions vs Actual")
+#                     # Scatter plot
+#                     st.subheader("📈 Predictions vs Actual")
                     
-                    fig = px.scatter(
-                        x=y_true,
-                        y=y_pred,
-                        labels={'x': 'TC thực tế', 'y': 'TC dự đoán'},
-                        opacity=0.6
-                    )
+#                     fig = px.scatter(
+#                         x=y_true,
+#                         y=y_pred,
+#                         labels={'x': 'TC thực tế', 'y': 'TC dự đoán'},
+#                         opacity=0.6
+#                     )
                     
-                    # Perfect prediction line
-                    min_val = min(y_true.min(), y_pred.min())
-                    max_val = max(y_true.max(), y_pred.max())
-                    fig.add_trace(go.Scatter(
-                        x=[min_val, max_val],
-                        y=[min_val, max_val],
-                        mode='lines',
-                        name='Dự đoán hoàn hảo',
-                        line=dict(color='red', dash='dash', width=2)
-                    ))
+#                     # Perfect prediction line
+#                     min_val = min(y_true.min(), y_pred.min())
+#                     max_val = max(y_true.max(), y_pred.max())
+#                     fig.add_trace(go.Scatter(
+#                         x=[min_val, max_val],
+#                         y=[min_val, max_val],
+#                         mode='lines',
+#                         name='Dự đoán hoàn hảo',
+#                         line=dict(color='red', dash='dash', width=2)
+#                     ))
                     
-                    st.plotly_chart(fig, use_container_width=True)
+#                     st.plotly_chart(fig, use_container_width=True)
                     
-                    # Error analysis
-                    col1, col2 = st.columns(2)
+#                     # Error analysis
+#                     col1, col2 = st.columns(2)
                     
-                    with col1:
-                        st.subheader("📊 Phân phối Sai số")
-                        errors = y_true - y_pred
-                        fig_error = px.histogram(
-                            x=errors,
-                            nbins=50,
-                            labels={'x': 'Sai số (Actual - Predicted)', 'y': 'Tần suất'}
-                        )
-                        fig_error.add_vline(x=0, line_dash="dash", line_color="red")
-                        st.plotly_chart(fig_error, use_container_width=True)
+#                     with col1:
+#                         st.subheader("📊 Phân phối Sai số")
+#                         errors = y_true - y_pred
+#                         fig_error = px.histogram(
+#                             x=errors,
+#                             nbins=50,
+#                             labels={'x': 'Sai số (Actual - Predicted)', 'y': 'Tần suất'}
+#                         )
+#                         fig_error.add_vline(x=0, line_dash="dash", line_color="red")
+#                         st.plotly_chart(fig_error, use_container_width=True)
                     
-                    with col2:
-                        st.subheader("📈 Thống kê Sai số")
-                        error_stats = pd.DataFrame({
-                            'Metric': ['Mean Error', 'Std Error', 'Min Error', 'Max Error', 'Median Error'],
-                            'Value': [
-                                errors.mean(),
-                                errors.std(),
-                                errors.min(),
-                                errors.max(),
-                                np.median(errors)
-                            ]
-                        })
-                        error_stats['Value'] = error_stats['Value'].round(4)
-                        st.dataframe(error_stats, use_container_width=True)
+#                     with col2:
+#                         st.subheader("📈 Thống kê Sai số")
+#                         error_stats = pd.DataFrame({
+#                             'Metric': ['Mean Error', 'Std Error', 'Min Error', 'Max Error', 'Median Error'],
+#                             'Value': [
+#                                 errors.mean(),
+#                                 errors.std(),
+#                                 errors.min(),
+#                                 errors.max(),
+#                                 np.median(errors)
+#                             ]
+#                         })
+#                         error_stats['Value'] = error_stats['Value'].round(4)
+#                         st.dataframe(error_stats, use_container_width=True)
                     
-                    # Download results
-                    st.markdown("---")
-                    eval_df['Error'] = eval_df['TC_HOANTHANH'] - eval_df['PRED_TC_HOANTHANH']
-                    eval_df['Abs_Error'] = np.abs(eval_df['Error'])
+#                     # Download results
+#                     st.markdown("---")
+#                     eval_df['Error'] = eval_df['TC_HOANTHANH'] - eval_df['PRED_TC_HOANTHANH']
+#                     eval_df['Abs_Error'] = np.abs(eval_df['Error'])
                     
-                    csv = eval_df.to_csv(index=False)
-                    st.download_button(
-                        label="📥 Download kết quả đánh giá",
-                        data=csv,
-                        file_name="model_evaluation_results.csv",
-                        mime="text/csv"
-                    )
+#                     csv = eval_df.to_csv(index=False)
+#                     st.download_button(
+#                         label="📥 Download kết quả đánh giá",
+#                         data=csv,
+#                         file_name="model_evaluation_results.csv",
+#                         mime="text/csv"
+#                     )
         
-        except Exception as e:
-            st.error(f"❌ Lỗi khi xử lý file: {e}")
+#         except Exception as e:
+#             st.error(f"❌ Lỗi khi xử lý file: {e}")
 
 
 # ========== ĐÁNH GIÁ RỦI RO ==========
