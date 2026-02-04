@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 | File | Mô tả |
 |------|-------|
-| `DataCleaning.ipynb` | Pipeline tiền xử lý dữ liệu từ raw dataa |
+| `DataCleaning.ipynb` | Pipeline tiền xử lý dữ liệu từ raw data |
 | `Dataflow2026EDA.ipynb` | Pipeline EDA |
 | `FeatureEngineering.ipynb` | Pipeline cho phần FeatureEngineering |
 
