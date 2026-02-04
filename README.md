@@ -39,6 +39,16 @@ streamlit run app/dashboard.py
 streamlit run app/dashboard.py
 ```
 
+
+### Thư mục `notebooks/final` quá trình phân tính và khai phá dữ liệu 
+
+| File | Mô tả |
+|------|-------|
+| `DataCleaning.ipynb` | Pipeline tiền xử lý dữ liệu từ raw dataa |
+| `Dataflow2026EDA.ipynb` | Pipeline EDA |
+| `FeatureEngineering.ipynb` | Pipeline cho phần FeatureEngineering |
+
+
 ## Mô tả các file chính
 
 ### Thư mục `src/`
